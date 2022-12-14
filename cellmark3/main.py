@@ -55,16 +55,16 @@ def load_image(path):
 @eel.expose
 def load_image_rpe(path):
     pixels=imload(path)
-    conservative_cell_mask = get_conservative_cell_mask(pixels)
+
+    # # Remove this feature, may be causing unnecessary bias
+    #DARK_FRACTION = 0.25 # The opacity of the original image in the non-mask regions
+    #conservative_cell_mask = get_conservative_cell_mask(pixels)
+    # background = np.zeros_like(pixels)
+    # new_pixels = np.zeros_like(pixels)
+    # for c in range(3):
+    #     new_pixels[:,:,c] = np.where(conservative_cell_mask,pixels[:,:,c],(1.0-DARK_FRACTION)*background[:,:,c] + DARK_FRACTION*pixels[:,:,c]) 
     
-    DARK_FRACTION = 0.25 # The opacity of the original image in the non-mask regions
-    
-    background = np.zeros_like(pixels)
-    
-    new_pixels = np.zeros_like(pixels)
-    
-    for c in range(3):
-        new_pixels[:,:,c] = np.where(conservative_cell_mask,pixels[:,:,c],(1.0-DARK_FRACTION)*background[:,:,c] + DARK_FRACTION*pixels[:,:,c]) 
+    new_pixels = pixels.copy()
         
     return pixels_to_json(new_pixels) 
 
