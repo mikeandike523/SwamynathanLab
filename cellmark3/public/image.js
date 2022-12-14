@@ -8,9 +8,9 @@ class Image{
             this.data = []
             for (var i=0;i<this.w*this.h;i++){
                 this.data.push([
-                    Math.round(Math.random() * 255),
-                    Math.round(Math.random() * 255),
-                    Math.round(Math.random() * 255)
+                    Math.floor(Math.random() * 255),
+                    Math.floor(Math.random() * 255),
+                    Math.floor(Math.random() * 255)
                 ])
             }
         }else{
@@ -51,12 +51,12 @@ class Image{
         return clone
     }
     averageColorInsideElement(fx,fy,element){
-        let x = Math.round(fx)
-        let y = Math.round(fy)
+        let x = Math.floor(fx)
+        let y = Math.floor(fy)
         let eW = element[0].length
         let eH = element.length
-        let offsX = Math.round(eW/2)
-        let offsY = Math.round(eH/2)
+        let offsX = Math.floor(eW/2)
+        let offsY = Math.floor(eH/2)
         let totalColor = [0,0,0]
         let denom=0
         for (let r = 0; r< eH; r++){
@@ -74,15 +74,15 @@ class Image{
                 }
             }
         }
-        return [Math.round(totalColor[0]/denom),Math.round(totalColor[1]/denom),Math.round(totalColor[2]/denom)]
+        return [Math.floor(totalColor[0]/denom),Math.floor(totalColor[1]/denom),Math.floor(totalColor[2]/denom)]
     }
     drawElement(fx,fy,element,color=[0,255,0]){
-        let x = Math.round(fx)
-        let y = Math.round(fy)
+        let x = Math.floor(fx)
+        let y = Math.floor(fy)
         let eW = element[0].length
         let eH = element.length
-        let offsX = Math.round(eW/2)
-        let offsY = Math.round(eH/2)
+        let offsX = Math.floor(eW/2)
+        let offsY = Math.floor(eH/2)
         for (let r = 0; r< eH; r++){
             for (let c = 0; c < eW; c++){
                if(element[r][c]){
@@ -92,12 +92,12 @@ class Image{
         }
     }
     restoreElement(fx,fy,element,backgroundImage){
-        let x = Math.round(fx)
-        let y = Math.round(fy)
+        let x = Math.floor(fx)
+        let y = Math.floor(fy)
         let eW = element[0].length
         let eH = element[1].length
-        let offsX = Math.round(eW/2)
-        let offsY = Math.round(eH/2)
+        let offsX = Math.floor(eW/2)
+        let offsY = Math.floor(eH/2)
         for (let r = 0; r< eH; r++){
             for (let c = 0; c < eW; c++){
                if(element[r][c]){

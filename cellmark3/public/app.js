@@ -65,11 +65,11 @@ function App() {
 
         console.log(`Attempting mark at (${imageX},${imageY})`) //@delete
 
-        if(conservativeCellMask.getPixel(Math.round(imageX),Math.round(imageY))[0]!=255){
+        if(conservativeCellMask.getPixel(Math.floor(imageX),Math.floor(imageY))[0]!=255){
             return
         }
 
-        marks.push([Math.round(imageX), Math.round(imageY)])
+        marks.push([Math.floor(imageX), Math.floor(imageY)])
         setMarks(marks)
 
         const MARKER_ELEMENT = windowGet("MARKER_ELEMENT",  [[true]])
@@ -267,8 +267,8 @@ function App() {
 
         imageStateObj.setImage(img)
         imageStateObj.setOrigin([
-            Math.round(img.w/2),
-            Math.round(img.h/2)
+            Math.floor(img.w/2),
+            Math.floor(img.h/2)
         ])
         imageStateObj.setZoom(1.0)
         setImageFilepath(filepath)
