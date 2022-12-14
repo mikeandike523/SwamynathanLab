@@ -1,0 +1,24 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../TensorflowCellSeperationExperiments/src"
+		}
+	],
+	"settings": {
+		"editor.wordWrap": "on",
+		"terminal.integrated.defaultProfile.windows": "Command Prompt",
+		"editor.fontFamily": "'Comic Mono', Consolas, 'Courier New', monospace",
+		"python.autoComplete.extraPaths": [
+		"..\\..\\TensorflowCellSeperationExperiments\\src",
+		"..\\..\\Retina Mapping Project"
+		],
+		"python.analysis.extraPaths": [
+			"..\\..\\TensorflowCellSeperationExperiments\\src",
+			"..\\..\\SwamynathanLab\\Retina Mapping Project"
+		],
+		"python.linting.pylintEnabled": false
+	}
+}

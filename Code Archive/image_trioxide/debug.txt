@@ -1,0 +1,30 @@
+🔗 Found pyo3 bindings
+🐍 Found CPython 3.11 at D:\SwamynathanLab\image_trioxide\.env\Scripts\python.exe
+error[E0432]: unresolved import `crate::types::rgb_color::RGBColor4Serde`
+ --> src\types\rgb_image.rs:6:41
+  |
+6 | use crate::types::rgb_color::{RGBColor, RGBColor4Serde, BLACK};
+  |                                         ^^^^^^^^^^^^^^ no `RGBColor4Serde` in `types::rgb_color`
+
+
+warning: unused import: `serde_json`
+ --> src\error_types.rs:1:5
+  |
+1 | use serde_json;
+  |     ^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` on by default
+
+
+warning: unused import: `crate::error_type::ErrorType`
+ --> src\error_types.rs:4:5
+  |
+4 | use crate::error_type::ErrorType;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
+error: aborting due to previous error; 2 warnings emitted
+
+
+For more information about this error, try `rustc --explain E0432`.
+

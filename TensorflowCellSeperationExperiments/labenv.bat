@@ -1,0 +1,1 @@
+call "D:\SwamynathanLab\lab_env\Scripts\activate.bat"

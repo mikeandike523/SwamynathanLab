@@ -1,0 +1,12 @@
+project_env/*
+cache/*
+temp/*
+debug/*
+checkpoint/*
+__pycache__/*
+**/__pycache__/*
+desktop.ini
+**/desktop.ini
+Results/*
+Archive/*
+output/*

@@ -1,0 +1,19 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"terminal.integrated.defaultProfile.windows": "Command Prompt",
+		"editor.wordWrap": "on",
+		"editor.fontFamily": "'Comic Mono', Consolas, 'Courier New', monospace",
+		"python.linting.pylintEnabled": false,
+		"python.autoComplete.extraPaths": [
+			"D:\\SwamynathanLab\\Retina Mapping Project"
+		],
+		"python.analysis.extraPaths": [
+			"D:\\SwamynathanLab\\Retina Mapping Project"
+		]
+	}
+}

@@ -1,0 +1,6 @@
+assets/**
+src/temp/**
+**/__pycache__/**
+src/.ipynb_checkpoints/**
+src/debug/**
+**/desktop.ini

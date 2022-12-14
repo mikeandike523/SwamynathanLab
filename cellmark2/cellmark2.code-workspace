@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"editor.fontFamily": "'Fira Code', Consolas, 'Courier New', monospace",
+		"editor.fontLigatures": true,
+		"terminal.integrated.fontFamily":"'Fira Code'",
+		"terminal.integrated.defaultProfile.windows":"Command Prompt"
+	}
+}

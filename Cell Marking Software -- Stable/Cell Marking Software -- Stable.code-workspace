@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../Retina Mapping Project"
+		},
+		{
+			"path": "../TensorflowCellSeperationExperiments/src"
+		}
+	],
+	"settings": {}
+}

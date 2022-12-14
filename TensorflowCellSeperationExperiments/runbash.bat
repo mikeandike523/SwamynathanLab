@@ -1,0 +1,1 @@
+powershell -ExecutionPolicy Bypass .\runbash.ps1
