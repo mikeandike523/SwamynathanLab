@@ -273,7 +273,7 @@ function App() {
         })
 
         try{
-            const newMarks = JSON.parse(await eel.auto_adjust_markings(JSON.stringify(image.toPlainObject()),
+            const newMarks = JSON.parse(await eel.auto_adjust_markings(JSON.stringify(greyscaleImage.toPlainObject()``),
             JSON.stringify(conservativeCellMask.toPlainObject()),JSON.stringify(marks))())
 
             const newAnnotatedImage = image.clone()
