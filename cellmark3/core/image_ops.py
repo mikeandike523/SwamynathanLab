@@ -2,6 +2,7 @@ from math import floor
 
 import cv2
 import numpy as np
+from scipy.spatial import KDTree
 
 from core.python_utils import rescale_array
 from core.debugging import imshow
@@ -83,16 +84,41 @@ def connected_components(mask, connectivity=4):
     
     mask_image = np.expand_dims(np.where(mask,255,0).astype(np.uint8),axis=2)
     
-    labels = cv2.connectedComponents(mask_image, connectivity=connectivity).squeeze()
+    labels = cv2.connectedComponents(mask_image, connectivity=connectivity)[1].squeeze()
     
     labels[labels==0] = -1
     
     labels[labels>=1] -= 1
     
     return labels
-    
             
-
+def voronoi(hint):
+    
+    print("Running voronoi...")
+    
+    seed_pixel_locations_rc = np.transpose(np.nonzero(hint > 0))
+    
+    seed_pixel_locations_rc_tree = KDTree(seed_pixel_locations_rc)
+    
+    H, W = hint.shape
+    
+    zero_locations_rc = np.transpose(np.nonzero(hint == 0))
+    
+    markers = hint.copy()
+    
+    cluster_map = connected_components(hint!=-1,4)
+    
+    for r,c in zero_locations_rc:
+        d, i = seed_pixel_locations_rc_tree.query((r,c),1)
+        nr, nc = seed_pixel_locations_rc[i]
+        if cluster_map[nr,nc]!=cluster_map[r,c]:
+            markers[r,c] = -1
+        else:
+            markers[r,c] = hint[nr,nc]
+    
+    print("Done.")  
+        
+    return markers
 
     
     

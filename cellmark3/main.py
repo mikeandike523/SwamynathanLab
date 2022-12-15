@@ -5,9 +5,10 @@ import pickle
 from core.file_picker import askopenfilename
 from core.io import imload, imsave
 from rpe_cell_counting import get_conservative_cell_mask
-from core.python_utils import fluiddict
-from core.image_ops import circular_structuring_element, draw_element_on
+from core.python_utils import fluiddict, rescale_array
+from core.image_ops import circular_structuring_element, draw_element_on, voronoi
 from core.debugging import imshow
+from core.array_utils import multiply_arrays
 
 import eel
 import orjson
@@ -109,6 +110,8 @@ def save_markings(imageFilepath,imageJSON, annotatedImageJSON, markingsJSON):
     
     imsave(vis_pixels,os.path.join(save_directory,"vis."+image_basename))
     
+    imsave(vis_pixels,os.path.join("temp","vis."+image_basename))
+    
     imsave(annotated_pixels,os.path.join(save_directory,"annotated."+image_basename))
     
     markings = orjson.loads(markingsJSON)
@@ -179,7 +182,36 @@ def auto_adjust_markings(imageJSON, cellMaskJSON, markingsJSON):
     
     cell_mask = json_to_pixels(cellMaskJSON)[:,:,0] > 0
     
+    cell_mask_image = np.dstack((np.where(cell_mask,255,0),)*3).astype(np.uint8)
+
+    
     image = json_to_pixels(imageJSON)
+    
+    image_LAB = cv2.cvtColor(image, cv2.COLOR_RGB2LAB)
+
+    L, A, B = image_LAB[:,:,0].astype(float), image_LAB[:,:,1].astype(float), image_LAB[:,:,2].astype(float)
+    
+    L = rescale_array(L)
+    
+    A = rescale_array(A)
+    
+    B = rescale_array(B)
+
+    L_image = np.dstack((255*L,)*3).astype(np.uint8)
+    A_image = np.dstack((255*A,)*3).astype(np.uint8)
+    B_image = np.dstack((255*B,)*3).astype(np.uint8)
+
+    imsave(L_image,"temp/L.png")
+    imsave(A_image,"temp/A.png")
+    imsave(B_image,"temp/B.png")
+    
+    combined = rescale_array(multiply_arrays(B,1-A,1-L))
+    
+    combined[np.logical_not(cell_mask)] = 0
+    
+    combined_image = np.dstack((255*combined,)*3).astype(np.uint8)
+    
+    imsave(combined_image,"temp/combined.png")
     
     markings = orjson.loads(markingsJSON)
     
@@ -193,13 +225,13 @@ def auto_adjust_markings(imageJSON, cellMaskJSON, markingsJSON):
         
         hint = draw_element_on(hint,mark[0],mark[1],MARKER_ELEMENT,i+1)
         
-    
     unseeded_area = np.logical_and(cell_mask, hint==-1)
     
-
     hint[unseeded_area] = 0
     
-    watershed_labels = cv2.watershed(image, hint).squeeze()
+    # watershed_labels = cv2.watershed(cell_mask_image, hint).squeeze()
+    
+    watershed_labels = voronoi(hint)
     
     watershed_labels[watershed_labels==0]=-1 # just in case
 
