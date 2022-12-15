@@ -36,12 +36,11 @@ init_folder("output/training_pairs",clear=True)
 # Copied from the manual annotation project
 # D:\SwamynathanLab\ImageJCloneWithPython\main.py
 
-MARKER_RADIUS = 3
-
-marker_element = IP.circular_structuring_element(MARKER_RADIUS,bool)
-
-def create_seed_grouping(marker_positions,W,H):
+def create_seed_grouping(marker_positions,W,H,marker_radius):
     
+    MARKER_RADIUS = marker_radius
+    marker_element = IP.circular_structuring_element(MARKER_RADIUS,bool)
+
     marker_element_rowcol = np.transpose(np.nonzero(marker_element))
 
     seed_grouping = np.zeros((H, W),dtype=int) -1
@@ -70,6 +69,8 @@ def main():
             saved_data = pickle.load(fl)
 
         image = saved_data["active_image"]
+        
+        marker_radius = saved_data["marker_radius"]
 
         H, W = image.shape[:2]
 
@@ -77,7 +78,7 @@ def main():
     
         # Create the markers based of the marker positions, using the same procedure as the manual annotation software
 
-        seed_grouping = create_seed_grouping(marker_positions, W, H)
+        seed_grouping = create_seed_grouping(marker_positions, W, H, marker_radius)
 
         # Get the conservative cell mask from the image --> Same mask generated during manual annotation
 

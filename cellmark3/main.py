@@ -32,7 +32,6 @@ def pixels_to_json(pixels):
 def json_to_pixels(imageJSON):
     imageObj = fluiddict(**(orjson.loads(imageJSON)))
     pixels = np.ravel(np.array(imageObj.data,dtype=np.uint8)).reshape((imageObj.h, imageObj.w, imageObj.nchannels))
-    print(pixels.shape) #@delete
     return pixels
     
 @eel.expose

@@ -24,11 +24,12 @@ SZ = 64
 BASE_FILTERS = 256
 USE_RANDOM_FLIP = True
 DROPOUT_RATE = None # Do not include dropout layer
-NUM_TRAIN = 100
-NUM_VAL = 10
-BATCH_SIZE = 5
+NUM_TRAIN = 200
+NUM_VAL = 50
+BATCH_SIZE = 2
+NUM_VIS = 5
 EPOCHS = 150
-EPOCHS_PER_VIS=3
+EPOCHS_PER_VIS=2
 LEARNING_RATE = 100e-6
 
 # App Setup
@@ -55,7 +56,7 @@ for _ in range(NUM_VAL):
     random_idx = random.randrange(0,len(all_filenames))
     validation_filenames.append(all_filenames.pop(random_idx))
 
-for _ in range(BATCH_SIZE):
+for _ in range(NUM_VIS):
     random_idx = random.randrange(0,len(all_filenames))
     visual_validation_filenames.append(all_filenames.pop(random_idx))
 

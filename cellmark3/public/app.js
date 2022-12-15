@@ -63,7 +63,6 @@ function App() {
 
     const markAtCoord = (imageX, imageY) => {
 
-        console.log(`Attempting mark at (${imageX},${imageY})`) //@delete
 
         if(conservativeCellMask.getPixel(Math.floor(imageX),Math.floor(imageY))[0]!=255){
             return
@@ -85,7 +84,6 @@ function App() {
 
     const eraseAtCoord = (imageX, imageY) => {
 
-        console.log(`Erasing at (${imageX},${imageY})`) //@delete
 
         let newMarks=[]
 
@@ -119,7 +117,6 @@ function App() {
 
     const enableViewPristineImage = () => {
 
-        console.log('enableViewPristineImage') //@delete
 
         setViewPristineImage(true)
         imageStateObj.setImage(windowGet("image",null))
@@ -129,7 +126,6 @@ function App() {
 
     const disableViewPristineImage = () => {
 
-        console.log('disableViewPristineImage') //@delete
 
         setViewPristineImage(false)
         imageStateObj.setImage(windowGet("annotatedImage",null))
@@ -166,18 +162,14 @@ function App() {
 
     const asyncLoadMarkings = async () => {
 
-        console.log("loading...") //@delete
 
-        console.log("asyncLoadMarkings") //@delete
 
         // loading logic
         const responseJSON = await eel.load_markings(imageFilepath)()
  
-        console.log(responseJSON) //@delete
 
         if(responseJSON==="no_session"){
 
-            console.log(responseJSON) //@delete
 
             setErrorMessage("No saved session.")
             setIsLoading(false)
