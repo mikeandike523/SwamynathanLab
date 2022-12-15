@@ -215,6 +215,9 @@ def auto_adjust_markings(imageJSON, cellMaskJSON, markingsJSON):
         
         centroid = (np.mean(island_rc.astype(float),axis=0)).astype(int)
         
+        if centroid[0] < 0 or centroid[0] >= cell_mask.shape[0] or centroid[1] < 0 or centroid[1] >= cell_mask.shape[1]:
+            continue
+        
         if not cell_mask[centroid[0],centroid[1]]:
             continue
     
