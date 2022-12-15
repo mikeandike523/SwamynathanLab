@@ -93,7 +93,7 @@ function App() {
 
         const MARKER_ELEMENT = windowGet("MARKER_ELEMENT",  [[true]])
 
-        const avgColor = annotatedImage.averageColorInsideElement(imageX,imageY,MARKER_ELEMENT)
+        const avgColor = image.averageColorInsideElement(imageX,imageY,MARKER_ELEMENT)
         const invColor = [255-avgColor[0],255-avgColor[1],255-avgColor[2]]
         img.drawElement(imageX,imageY,MARKER_ELEMENT,invColor)
 
@@ -111,7 +111,7 @@ function App() {
 
         const MARKER_ELEMENT = windowGet("MARKER_ELEMENT",  [[true]])
 
-        const avgColor = annotatedImage.averageColorInsideElement(imageX,imageY,MARKER_ELEMENT)
+        const avgColor = image.averageColorInsideElement(imageX,imageY,MARKER_ELEMENT)
         const invColor = [255-avgColor[0],255-avgColor[1],255-avgColor[2]]
         annotatedImage.drawElement(imageX,imageY,MARKER_ELEMENT,invColor)
         
@@ -403,6 +403,7 @@ function App() {
     const clearAllMarks = () => {
         if(initialized){
             setMarks([])
+            setAnnotatedImage(image.clone())
             imageStateObj.setImage(image)
             imageStateObj.forceRefresh()
             forceRefresh()

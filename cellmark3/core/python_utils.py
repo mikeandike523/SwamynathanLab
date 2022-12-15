@@ -25,7 +25,7 @@ def rescale_array(arr, epsilon = 1e-9):
     if np.abs(denom) < epsilon:
         return np.zeros_like(arr)
     
-    return (arr - np.min(arr)) / denom
+    return (arr.copy() - np.min(arr)) / denom
     
 
 class fluiddict(object):

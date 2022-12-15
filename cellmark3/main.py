@@ -1,12 +1,13 @@
 import os
 from time import sleep
 import pickle
+from math import floor
 
 from core.file_picker import askopenfilename
 from core.io import imload, imsave
 from rpe_cell_counting import get_conservative_cell_mask
 from core.python_utils import fluiddict, rescale_array
-from core.image_ops import circular_structuring_element, draw_element_on, voronoi
+from core.image_ops import circular_structuring_element, draw_element_on, voronoi, connected_components
 from core.debugging import imshow
 from core.array_utils import multiply_arrays
 
@@ -177,16 +178,12 @@ def load_markings(imageFilepath):
     
     return orjson.dumps(response.datastore).decode("utf-8")
 
-@eel.expose
-def auto_adjust_markings(imageJSON, cellMaskJSON, markingsJSON):
-    
-    cell_mask = json_to_pixels(cellMaskJSON)[:,:,0] > 0
-    
+
+
+def adjust_markings_pass(method, markings, image, cell_mask):
+
     cell_mask_image = np.dstack((np.where(cell_mask,255,0),)*3).astype(np.uint8)
 
-    
-    image = json_to_pixels(imageJSON)
-    
     image_LAB = cv2.cvtColor(image, cv2.COLOR_RGB2LAB)
 
     L, A, B = image_LAB[:,:,0].astype(float), image_LAB[:,:,1].astype(float), image_LAB[:,:,2].astype(float)
@@ -205,15 +202,13 @@ def auto_adjust_markings(imageJSON, cellMaskJSON, markingsJSON):
     imsave(A_image,"temp/A.png")
     imsave(B_image,"temp/B.png")
     
-    combined = rescale_array(multiply_arrays(B,1-A,1-L))
+    combined = multiply_arrays(B,1-A,1-L)
     
     combined[np.logical_not(cell_mask)] = 0
     
-    combined_image = np.dstack((255*combined,)*3).astype(np.uint8)
+    combined_image = np.dstack((255*rescale_array(combined),)*3).astype(np.uint8)
     
     imsave(combined_image,"temp/combined.png")
-    
-    markings = orjson.loads(markingsJSON)
     
     hint = np.zeros(image.shape[:2], int) -1
   
@@ -228,10 +223,12 @@ def auto_adjust_markings(imageJSON, cellMaskJSON, markingsJSON):
     unseeded_area = np.logical_and(cell_mask, hint==-1)
     
     hint[unseeded_area] = 0
+
+    # still need to decide on the best image to use    
+    # watershed_image = np.dstack((255*(1.0-L),)*3).astype(np.uint8)
+    watershed_image = combined_image
     
-    # watershed_labels = cv2.watershed(cell_mask_image, hint).squeeze()
-    
-    watershed_labels = voronoi(hint)
+    watershed_labels = voronoi(hint) if method=="voronoi" else cv2.watershed(watershed_image, hint).squeeze()
     
     watershed_labels[watershed_labels==0]=-1 # just in case
 
@@ -241,21 +238,55 @@ def auto_adjust_markings(imageJSON, cellMaskJSON, markingsJSON):
     
     num_groups = np.max(watershed_labels) + 1
     
+    cluster_map = connected_components(cell_mask)
+    
     for group_number in range(num_groups):
         
         island_rc = np.transpose(np.nonzero(watershed_labels==group_number))
         
-        centroid = (np.mean(island_rc.astype(float),axis=0)).astype(int)
+        weights = np.array([combined[r,c] for r,c in island_rc],float)
         
-        if centroid[0] < 0 or centroid[0] >= cell_mask.shape[0] or centroid[1] < 0 or centroid[1] >= cell_mask.shape[1]:
-            continue
+        weights/= np.sum(weights)
         
-        if not cell_mask[centroid[0],centroid[1]]:
-            continue
-    
-        new_markings.append(np.flip(centroid)) 
+        centroid = (np.sum(
+            
+                            np.multiply(
+                                island_rc.astype(float),
+                                np.stack((weights,)*2,axis=1)
+                            )
+                           
+                            ,axis=0)).astype(int)
+        
+        marker = markings[group_number]
+        
+        marker = [int(floor(marker[0])), int(floor(marker[1]))]
 
-    result = [[float(mark[0]),float(mark[1])] for mark in new_markings]
+        result_marker = np.flip(centroid)
+
+        if centroid[0] < 0 or centroid[0] >= cell_mask.shape[0] or centroid[1] < 0 or centroid[1] >= cell_mask.shape[1]:
+            result_marker = marker
+        
+        elif not cell_mask[centroid[0],centroid[1]]:
+            result_marker = marker
+        
+        elif cluster_map[centroid[0],centroid[1]] != cluster_map[marker[1],marker[0]]:
+            result_marker = marker
+        
+        new_markings.append(result_marker) 
+    
+    return new_markings
+    
+
+@eel.expose
+def auto_adjust_markings(imageJSON, cellMaskJSON, markingsJSON):
+    cell_mask = json_to_pixels(cellMaskJSON)[:,:,0] > 0
+    image = json_to_pixels(imageJSON)
+    markings = orjson.loads(markingsJSON)
+    
+    markings = adjust_markings_pass("voronoi",markings,image,cell_mask)
+    # markings = adjust_markings_pass("watershed",markings,image,cell_mask)
+    
+    result = [[float(mark[0]),float(mark[1])] for mark in markings]
     
     return orjson.dumps(result).decode('utf-8')
 
