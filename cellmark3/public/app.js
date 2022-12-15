@@ -273,7 +273,7 @@ function App() {
         })
 
         try{
-            const newMarks = JSON.parse(await eel.auto_adjust_markings(JSON.stringify(greyscaleImage.toPlainObject()``),
+            const newMarks = JSON.parse(await eel.auto_adjust_markings(JSON.stringify(greyscaleImage.toPlainObject()),
             JSON.stringify(conservativeCellMask.toPlainObject()),JSON.stringify(marks))())
 
             const newAnnotatedImage = image.clone()
@@ -345,8 +345,12 @@ function App() {
                 saveMarkings()
                 evt.preventDefault()
             }
-            if(evt.ctrlKey&&(evt.key==="l"||evt.key==="r")){
+            if(evt.ctrlKey&&(evt.key==="l")){
                 loadMarkings()
+                evt.preventDefault()
+            }
+            if(evt.ctrlKey&&(evt.key==="r")){
+                clearAllMarks()
                 evt.preventDefault()
             }
         })
@@ -400,6 +404,15 @@ function App() {
             setErrorMessage(formatError(e))
         }
     }
+
+    const clearAllMarks = () => {
+        if(initialized){
+            setMarks([])
+            imageStateObj.setImage(image)
+            imageStateObj.forceRefresh()
+            forceRefresh()
+        }
+    }   
 
     useEffect(()=>{
         (async ()=>{
@@ -489,6 +502,27 @@ function App() {
                     })()  
                 ):(
                     Fragment()()
+                ),
+                A({
+                    className:"nav-link text-danger",
+                    href:"#",
+                    onClick:clearAllMarks,
+                })('Clear All Annotations'),
+            ),
+            Ul({
+                className:"navbar-nav ms-auto"
+            })(
+                A({
+                    className:"nav-link text-primary",
+                    href:"#",
+                    style:{
+                        marginRight:"0.5em",
+                        cursor:"default",
+                        userSelect:"none",
+                    },
+                    onClick:(evt)=>{evt.preventDefault(); evt.stopPropogation(); return false;}
+                })(
+                   H2()(marks.length)
                 )
             )
         ),

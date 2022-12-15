@@ -181,6 +181,8 @@ def auto_adjust_markings(imageJSON, cellMaskJSON, markingsJSON):
     
     image = json_to_pixels(imageJSON)
     
+    imshow(image)
+    
     markings = orjson.loads(markingsJSON)
     
     hint = np.zeros(image.shape[:2], int) -1

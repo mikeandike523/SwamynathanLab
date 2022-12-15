@@ -60,9 +60,14 @@ function H6() {
 function P() {
     return (...children)=>{return R.cE('h6',{},...children)}
 }
+function Strong() {
+    return (...children)=>{return R.cE('strong',{},...children)}
+}
+
 function Fragment() {
     return (...children)=>{return R.cE(React.Fragment,{},...children)}
 }
+
 
 function toPlainObject(obj, references=[]){
     if(!obj){
