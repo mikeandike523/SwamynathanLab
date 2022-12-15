@@ -1,3 +1,5 @@
+from math import floor
+
 import cv2
 import numpy as np
 
@@ -47,7 +49,6 @@ def adaptive_threshold_by_mean(plot, blocksize):
     return result > 0
 
 def circular_structuring_element(R,dtype,remove_center=False):
-    D = R*2+1
     def sieve(rMatrix,cMatrix):
         return np.logical_and(np.power(rMatrix-R,2) + np.power(cMatrix-R,2) <= R*R,
                                  np.logical_or(
@@ -55,6 +56,44 @@ def circular_structuring_element(R,dtype,remove_center=False):
                                  ) if remove_center else np.ones((2*R+1,2*R+1),bool))
         
     return np.fromfunction(sieve,shape=(2*R+1,2*R+1),dtype=int).astype(dtype)
+
+def draw_element_on(image, x, y, element, color):
+    
+    x = int(floor(x))
+    y = int(floor(y))
+    
+    eH, eW = element.shape
+    
+    offsx = int(eW//2)
+    offsy = int(eH//2)
+    
+    new_image = image.copy()
+    
+    for r in range(eH):
+        for c in range(eW):
+            try:
+                if element[r,c]:
+                    new_image[y-offsy+r, x-offsx+c,...] = color
+            except IndexError as e:
+                pass
+            
+    return new_image
+
+def connected_components(mask, connectivity=4):
+    
+    mask_image = np.expand_dims(np.where(mask,255,0).astype(np.uint8),axis=2)
+    
+    labels = cv2.connectedComponents(mask_image, connectivity=connectivity).squeeze()
+    
+    labels[labels==0] = -1
+    
+    labels[labels>=1] -= 1
+    
+    return labels
+    
+            
+
+
     
     
     

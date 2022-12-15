@@ -1,5 +1,7 @@
 // some code copied from https://getbootstrap.com/docs/4.0/components/navbar/
 
+ASYNC_OP_MIN_DELAY_MILLIS = 250
+
 function calculate_marker_element(){
 
     const MARKER_RADIUS = windowGet("MARKER_RADIUS",0)
@@ -22,6 +24,8 @@ function App() {
 
     const [errorMessageComponent, setErrorMessageComponent] = useState(Fragment()())
 
+    const [messageComponent, setMessageComponent] = useState(Fragment()())
+
     const setErrorMessage = (message) => {
         let components = [
             message?Button({className:"btn btn-link text-secondary",onClick(){
@@ -39,6 +43,24 @@ function App() {
         setErrorMessageComponent(Div({className:"text-danger"})(...components))
     }
 
+    const setMessage = (message) => {
+        let components = [
+            message?Button({className:"btn btn-link text-secondary",onClick(){
+                setMessage("")
+            }})("close\u00D7"):Fragment()()
+        ]
+        let lines = message.split("\n")
+        for (let i = 0; i < lines.length; i++) {
+            lines[i] = lines[i].replace(/ /g,"\u00A0").replace(/\t/g,"\u00A0\u00A0")
+            components.push(Fragment()(lines[i]))
+            if(i<lines.length-1){
+                components.push(Br()())
+            }
+        }
+        setMessageComponent(Div({className:"text-primary"})(...components))
+    }
+
+
     const [refreshSwitch, setRefreshSwitch] = useState(false)
 
     const forceRefresh = () => {
@@ -51,15 +73,32 @@ function App() {
 
     const [initialized, setInitialized] = useState(false)
     const [annotatedImage, setAnnotatedImage] = useState(null)
+    const [greyscaleImage, setGreyscaleImage] = useState(null)
     const [marks, setMarks] = useState([])
 
     const [viewPristineImage, setViewPristineImage] = useState(false)
 
     const [isSaving, setIsSaving] = useState(false)
 
-    const [isLoading, setIsLoading] = useState(false)
+    const [isLoading, setIsLoading] = useState(false) 
+
+    const [isAdjusting, setIsAdjusting] = useState(false)
 
     const imageStateObj = useImageViewerState()
+
+    const drawMarkOnImageAtCoord = (imageX, imageY, img) => {
+
+        if(conservativeCellMask.getPixel(Math.floor(imageX),Math.floor(imageY))[0]!=255){
+            return
+        }
+
+        const MARKER_ELEMENT = windowGet("MARKER_ELEMENT",  [[true]])
+
+        const avgColor = annotatedImage.averageColorInsideElement(imageX,imageY,MARKER_ELEMENT)
+        const invColor = [255-avgColor[0],255-avgColor[1],255-avgColor[2]]
+        img.drawElement(imageX,imageY,MARKER_ELEMENT,invColor)
+
+    }
 
     const markAtCoord = (imageX, imageY) => {
 
@@ -136,8 +175,15 @@ function App() {
     windowSet("imageFilepath",imageFilepath)
     windowSet("isSaving",isSaving)
     windowSet("isLoading",isLoading)
+    windowSet("isAdjusting",isAdjusting)
 
     const asyncSaveMarkings = async () => {
+
+        await new Promise((resolve, reject) => {
+            setTimeout(() => {
+                resolve()
+            }, ASYNC_OP_MIN_DELAY_MILLIS)
+        })
 
         // For testing the UI
         try{
@@ -153,8 +199,11 @@ function App() {
 
     const saveMarkings = () => {
         if(windowGet("imageFilepath","")){
-            if(!windowGet("isSaving",false)&&!windowGet("isLoading",false)){
-                windowGet("asyncSaveMarkings",async()=>{})()
+            if(!windowGet("isSaving",false)&&!windowGet("isLoading",false)&&!windowGet("isAdjusting",false)){
+                windowGet("asyncSaveMarkings",async()=>{
+                    setIsSaving(false)
+                    forceRefresh()
+                })()
                 setIsSaving(true)
             }
         }
@@ -162,7 +211,11 @@ function App() {
 
     const asyncLoadMarkings = async () => {
 
-
+        await new Promise((resolve, reject) => {
+            setTimeout(() => {
+                resolve()
+            }, ASYNC_OP_MIN_DELAY_MILLIS)
+        })
 
         // loading logic
         const responseJSON = await eel.load_markings(imageFilepath)()
@@ -201,15 +254,73 @@ function App() {
 
     const loadMarkings = () => {
         if(windowGet("imageFilepath","")){
-            if(!windowGet("isSaving",false)&&!windowGet("isLoading",false)){
-                windowGet("asyncLoadMarkings",async()=>{})()
+            if(!windowGet("isSaving",false)&&!windowGet("isLoading",false)&&!windowGet("isAdjusting",false)){
+                windowGet("asyncLoadMarkings",async()=>{
+                    setIsLoading(false)
+                    forceRefresh()
+                })()
                 setIsLoading(true)
+            }
+        }
+    }
+
+    const asyncAdjustMarkings = async () => {
+
+        await new Promise((resolve, reject) => {
+            setTimeout(() => {
+                resolve()
+            }, ASYNC_OP_MIN_DELAY_MILLIS)
+        })
+
+        try{
+            const newMarks = JSON.parse(await eel.auto_adjust_markings(JSON.stringify(image.toPlainObject()),
+            JSON.stringify(conservativeCellMask.toPlainObject()),JSON.stringify(marks))())
+
+            const newAnnotatedImage = image.clone()
+
+            newMarks.forEach((mark)=>{
+                drawMarkOnImageAtCoord(Math.floor(mark[0]),Math.floor(mark[1]),newAnnotatedImage)
+            })
+
+            setAnnotatedImage(newAnnotatedImage)
+            setMarks(newMarks)
+
+            if(!viewPristineImage){
+                imageStateObj.setImage(newAnnotatedImage)
+            }else{
+                imageStateObj.setImage(image)
+            }
+
+            imageStateObj.forceRefresh()
+
+        }catch(e){
+            setErrorMessage(formatError(e))
+        }
+
+        setIsAdjusting(false)
+        forceRefresh()
+    }
+
+    const adjustMarkings = () => {
+        if(windowGet("imageFilepath","")){
+            if(!windowGet("isSaving",false)&&!windowGet("isLoading",false)&&!windowGet("isAdjusting",false)){
+                if(marks.length > 0){
+                    windowGet("asyncAdjustMarkings",async()=>{
+                        setIsAdjusting(false)
+                        forceRefresh()
+                    })()
+                    setIsAdjusting(true)
+                }else{
+                    setErrorMessage("No marks to adjust.")
+                }
             }
         }
     }
 
     windowSet("asyncSaveMarkings",asyncSaveMarkings)
     windowSet("asyncLoadMarkings",asyncLoadMarkings)
+    windowSet("asyncAdjustMarkings",asyncAdjustMarkings)
+
 
     const imageViewer = newImageViewer(imageStateObj,
         markAtCoord,
@@ -251,8 +362,16 @@ function App() {
     const imageLoadProcedure = async (filepath) => {
         const imageJSON = await eel.load_image_rpe(filepath)()
         const maskJSON = await eel.get_conservative_cell_mask_rpe(filepath)()
+
+
         const img = Image.fromJSON(imageJSON)
         const annotatedImg = img.clone()
+
+        let mask = Image.fromJSON(maskJSON)
+
+        const imgGs = img.toGreyscale().withMaskApplied(mask)
+
+        setGreyscaleImage(imgGs)
 
         windowSet("image", img)
         windowSet("annotatedImage", annotatedImg)
@@ -265,7 +384,7 @@ function App() {
         imageStateObj.setZoom(1.0)
         setImageFilepath(filepath)
         setImage(img)
-        setConservativeCellMask(Image.fromJSON(maskJSON))
+        setConservativeCellMask(mask)
         setAnnotatedImage(annotatedImg)
         imageStateObj.show()
         forceRefresh()
@@ -351,6 +470,25 @@ function App() {
                     })()  
                 ):(
                     Fragment()()
+                ),
+                A({
+                    className:"nav-link",
+                    href:"#",
+                    onClick:adjustMarkings
+                })(
+                    "Auto-Adjust Markings"
+                ),
+                isAdjusting?(
+                    A({
+                        className:"nav-link text-primary spinner-border",
+                        href:"#",
+                        onClick:(evt)=>{evt.preventDefault(); evt.stopPropogation(); return false;},
+                        style:{
+                            cursor:"default"
+                        }
+                    })()  
+                ):(
+                    Fragment()()
                 )
             )
         ),
@@ -373,7 +511,8 @@ function App() {
                         // )
                         Fragment()()
                     ),
-                    errorMessageComponent
+                    errorMessageComponent,
+                    messageComponent
                 )  
             ),
         )

@@ -116,6 +116,11 @@ class Debug {
     }
 }
 
+function formatMessage(m, spaces=2) {
+    let plainObject = toPlainObject(m)
+    return JSON.stringify(plainObject, null, spaces)
+}
+
 function formatError(e,spaces=2){ 
     let plainObject = toPlainObject(e)
     if(plainObject.hasOwnProperty("errorText")&&plainObject.hasOwnProperty("errorTraceback")){
@@ -280,7 +285,7 @@ class VecOps{
             let len = A.length
             let total = 0
             for(let idx = 0;idx < len;idx++){
-                total += A[idx] + B[idx]
+                total += A[idx]
             }
             return total
         }
@@ -316,7 +321,6 @@ class VecOps{
     static magnitude(A){
         return Math.sqrt(VecOps.dot(A,A))
     }
-
 
 }
 

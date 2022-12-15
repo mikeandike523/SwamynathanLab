@@ -6,16 +6,22 @@ from core.file_picker import askopenfilename
 from core.io import imload, imsave
 from rpe_cell_counting import get_conservative_cell_mask
 from core.python_utils import fluiddict
+from core.image_ops import circular_structuring_element, draw_element_on
+from core.debugging import imshow
 
 import eel
 import orjson
 import numpy as np
+import cv2
+
 
 FS_POLL_TIME = 0.125
 
 MARKER_RADIUS=2
 
 DELETE_RADIUS = MARKER_RADIUS * 2
+
+MARKER_ELEMENT = circular_structuring_element(MARKER_RADIUS, dtype=bool)
 
 eel.init("public")
 
@@ -168,5 +174,56 @@ def load_markings(imageFilepath):
     
     return orjson.dumps(response.datastore).decode("utf-8")
 
+@eel.expose
+def auto_adjust_markings(greyscaleImageJSON, cellMaskJSON, markingsJSON):
+    
+    cell_mask = json_to_pixels(cellMaskJSON)[:,:,0] > 0
+    
+    greyscale_image = json_to_pixels(greyscaleImageJSON)
+    
+    markings = orjson.loads(markingsJSON)
+    
+    hint = np.zeros(greyscale_image.shape[:2], int) -1
+  
+    num_marks = len(markings)
+  
+    print(MARKER_ELEMENT) #@delete
+  
+    for i, mark in enumerate(markings):
+        
+        print(f"Drawing marking {i+1} of {num_marks}...")
+        
+        hint = draw_element_on(hint,mark[0],mark[1],MARKER_ELEMENT,i+1)
+        
+    
+    unseeded_area = np.logical_and(cell_mask, hint==-1)
+    
+
+    hint[unseeded_area] = 0
+    
+    watershed_labels = cv2.watershed(greyscale_image, hint).squeeze()
+    
+    watershed_labels[watershed_labels==0]=-1 # just in case
+
+    watershed_labels[watershed_labels>=1]-=1
+    
+    new_markings = []
+    
+    num_groups = np.max(watershed_labels) + 1
+    
+    for group_number in range(num_groups):
+        
+        island_rc = np.transpose(np.nonzero(watershed_labels==group_number))
+        
+        centroid = (np.mean(island_rc.astype(float),axis=0)).astype(int)
+        
+        if not cell_mask[centroid[0],centroid[1]]:
+            continue
+    
+        new_markings.append(np.flip(centroid)) 
+
+    result = [[float(mark[0]),float(mark[1])] for mark in new_markings]
+    
+    return orjson.dumps(result).decode('utf-8')
 
 eel.start("index.html")

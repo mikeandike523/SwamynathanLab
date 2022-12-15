@@ -116,4 +116,33 @@ class Image{
             data:this.data
         }
     }
+
+    toGreyscale(){
+        let greyscale = new Image(this.w, this.h)
+        for (let x = 0; x < this.w; x++){
+            for(let y = 0; y < this.h; y++){
+                let color = this.getPixel(x, y)
+                let level= (VecOps.sum(color))/3.0
+                greyscale.setPixel(x, y, [
+                    level,
+                    level,
+                    level
+                ])
+            }
+        }
+        return greyscale
+    }
+
+    withMaskApplied(mask){
+        let img = this.clone()
+        for(let x = 0; x < img.w; x++){
+            for(let y = 0; y < img.h; y++){
+                if(mask.getPixel(x, y)[0]===0){
+                    img.setPixel(x,y,VecOps.zeros(this.nchannels))
+                }
+            }
+        }
+        return img
+    }
+    
 }
