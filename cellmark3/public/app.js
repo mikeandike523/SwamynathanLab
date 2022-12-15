@@ -73,7 +73,6 @@ function App() {
 
     const [initialized, setInitialized] = useState(false)
     const [annotatedImage, setAnnotatedImage] = useState(null)
-    const [greyscaleImage, setGreyscaleImage] = useState(null)
     const [marks, setMarks] = useState([])
 
     const [viewPristineImage, setViewPristineImage] = useState(false)
@@ -273,7 +272,7 @@ function App() {
         })
 
         try{
-            const newMarks = JSON.parse(await eel.auto_adjust_markings(JSON.stringify(greyscaleImage.toPlainObject()),
+            const newMarks = JSON.parse(await eel.auto_adjust_markings(JSON.stringify(image.withMaskApplied(conservativeCellMask).toPlainObject()),
             JSON.stringify(conservativeCellMask.toPlainObject()),JSON.stringify(marks))())
 
             const newAnnotatedImage = image.clone()
@@ -372,10 +371,6 @@ function App() {
         const annotatedImg = img.clone()
 
         let mask = Image.fromJSON(maskJSON)
-
-        const imgGs = img.withMaskApplied(mask)
-
-        setGreyscaleImage(imgGs)
 
         windowSet("image", img)
         windowSet("annotatedImage", annotatedImg)
