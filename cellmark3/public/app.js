@@ -83,6 +83,10 @@ function App() {
 
     const [isAdjusting, setIsAdjusting] = useState(false)
 
+    const[isPreloading, setIsPreloading] = useState(false)
+
+    const [isBlockingForPython, setIsblockingForPython] = useState(false)
+
     const imageStateObj = useImageViewerState()
 
     const drawMarkOnImageAtCoord = (imageX, imageY, img) => {
@@ -175,6 +179,8 @@ function App() {
     windowSet("isSaving",isSaving)
     windowSet("isLoading",isLoading)
     windowSet("isAdjusting",isAdjusting)
+    windowSet("isPreloading",isPreloading)
+    windowSet("isBlockingForPython",isBlockingForPython)
 
     const asyncSaveMarkings = async () => {
 
@@ -192,18 +198,20 @@ function App() {
         }
  
         setIsSaving(false)
+        setIsblockingForPython(false)
 
         forceRefresh()
     }
 
     const saveMarkings = () => {
         if(windowGet("imageFilepath","")){
-            if(!windowGet("isSaving",false)&&!windowGet("isLoading",false)&&!windowGet("isAdjusting",false)){
+            if(!windowGet("isBlockingForPython",false)){
                 windowGet("asyncSaveMarkings",async()=>{
                     setIsSaving(false)
                     forceRefresh()
                 })()
                 setIsSaving(true)
+                setIsblockingForPython(true)
             }
         }
     }
@@ -247,20 +255,42 @@ function App() {
         imageStateObj.forceRefresh()
 
         setIsLoading(false)
+        setIsblockingForPython(false)
 
         forceRefresh()
     }
 
     const loadMarkings = () => {
         if(windowGet("imageFilepath","")){
-            if(!windowGet("isSaving",false)&&!windowGet("isLoading",false)&&!windowGet("isAdjusting",false)){
+            if(!windowGet("isBlockingForPython",false)){
                 windowGet("asyncLoadMarkings",async()=>{
                     setIsLoading(false)
                     forceRefresh()
                 })()
                 setIsLoading(true)
+                setIsblockingForPython(true)
             }
         }
+    }
+
+    const changeToGeneratedMarkings = (generatedMarkings)=>{
+
+        const newAnnotatedImage = image.clone()
+
+        generatedMarkings.forEach((mark)=>{
+            drawMarkOnImageAtCoord(Math.floor(mark[0]),Math.floor(mark[1]),newAnnotatedImage)
+        })
+
+        setAnnotatedImage(newAnnotatedImage)
+        setMarks(generatedMarkings)
+
+        if(!viewPristineImage){
+            imageStateObj.setImage(newAnnotatedImage)
+        }else{
+            imageStateObj.setImage(image)
+        }
+
+        imageStateObj.forceRefresh()
     }
 
     const asyncAdjustMarkings = async () => {
@@ -272,43 +302,31 @@ function App() {
         })
 
         try{
+
             const newMarks = JSON.parse(await eel.auto_adjust_markings(JSON.stringify(image.withMaskApplied(conservativeCellMask).toPlainObject()),
             JSON.stringify(conservativeCellMask.toPlainObject()),JSON.stringify(marks))())
 
-            const newAnnotatedImage = image.clone()
-
-            newMarks.forEach((mark)=>{
-                drawMarkOnImageAtCoord(Math.floor(mark[0]),Math.floor(mark[1]),newAnnotatedImage)
-            })
-
-            setAnnotatedImage(newAnnotatedImage)
-            setMarks(newMarks)
-
-            if(!viewPristineImage){
-                imageStateObj.setImage(newAnnotatedImage)
-            }else{
-                imageStateObj.setImage(image)
-            }
-
-            imageStateObj.forceRefresh()
-
+            changeToGeneratedMarkings(newMarks)
+     
         }catch(e){
             setErrorMessage(formatError(e))
         }
 
         setIsAdjusting(false)
+        setIsblockingForPython(false)
         forceRefresh()
     }
 
     const adjustMarkings = () => {
         if(windowGet("imageFilepath","")){
-            if(!windowGet("isSaving",false)&&!windowGet("isLoading",false)&&!windowGet("isAdjusting",false)){
+            if(!windowGet("isBlockingForPython",false)){
                 if(marks.length > 0){
                     windowGet("asyncAdjustMarkings",async()=>{
                         setIsAdjusting(false)
                         forceRefresh()
                     })()
                     setIsAdjusting(true)
+                    setIsblockingForPython(true)
                 }else{
                     setErrorMessage("No marks to adjust.")
                 }
@@ -316,10 +334,49 @@ function App() {
         }
     }
 
+    const asyncPreloadMarkings = async () => {
+
+        await new Promise((resolve, reject) => {
+            setTimeout(() => {
+                resolve()
+            }, ASYNC_OP_MIN_DELAY_MILLIS)
+        })
+
+
+        // Call preloading api here
+        try{
+            const newMarks = JSON.parse(await eel.auto_preload_markings(
+                JSON.stringify(image.toPlainObject()),
+                JSON.stringify(conservativeCellMask.toPlainObject())
+            )())
+
+            changeToGeneratedMarkings(newMarks)
+        }catch(e){
+            setErrorMessage(formatError(e))
+        }
+        setIsPreloading(false)
+        setIsblockingForPython(false)
+
+        forceRefresh()
+    }
+
+    const preloadMarkings = () => {
+        if(windowGet("imageFilepath","")){
+            if(!windowGet("isBlockingForPython",false)){
+                windowGet("asyncPreloadMarkings",async()=>{
+                    setIsPreloading(false)
+                    forceRefresh()
+                })()
+                setIsPreloading(true)
+                setIsblockingForPython(true)
+            }
+        }
+    }
+
     windowSet("asyncSaveMarkings",asyncSaveMarkings)
     windowSet("asyncLoadMarkings",asyncLoadMarkings)
     windowSet("asyncAdjustMarkings",asyncAdjustMarkings)
-
+    windowSet("asyncPreloadMarkings",asyncPreloadMarkings)
 
     const imageViewer = newImageViewer(imageStateObj,
         markAtCoord,
@@ -488,6 +545,25 @@ function App() {
                     "Auto-Adjust Markings"
                 ),
                 isAdjusting?(
+                    A({
+                        className:"nav-link text-primary spinner-border",
+                        href:"#",
+                        onClick:(evt)=>{evt.preventDefault(); evt.stopPropogation(); return false;},
+                        style:{
+                            cursor:"default"
+                        }
+                    })()  
+                ):(
+                    Fragment()()
+                ),
+                A({
+                    className:"nav-link",
+                    href:"#",
+                    onClick:preloadMarkings
+                })(
+                    "Preload Markings"
+                ),
+                isPreloading?(
                     A({
                         className:"nav-link text-primary spinner-border",
                         href:"#",

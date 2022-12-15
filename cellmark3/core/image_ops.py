@@ -120,6 +120,21 @@ def voronoi(hint):
         
     return markers
 
+def distance_transform_L1(mask):
+    
+    mask_image = np.expand_dims(np.where(mask,255,0).astype(np.uint8),axis=2)
+    
+    dist = cv2.distanceTransform(mask_image, cv2.DIST_L1, 3)
+    
+    return dist.squeeze().astype(int)
+
+def binarize_otsu(plot):
+    
+    plot_image = np.expand_dims(255*plot,axis=2).astype(np.uint8)
+    
+    binarized = cv2.threshold(plot_image,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)[1]
+    
+    return binarized.squeeze() > 0
     
     
     

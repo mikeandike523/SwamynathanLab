@@ -7,7 +7,8 @@ from core.file_picker import askopenfilename
 from core.io import imload, imsave
 from rpe_cell_counting import get_conservative_cell_mask
 from core.python_utils import fluiddict, rescale_array
-from core.image_ops import circular_structuring_element, draw_element_on, voronoi, connected_components
+from core.image_ops import circular_structuring_element, draw_element_on, voronoi, connected_components, distance_transform_L1, unique_quantize, binarize_otsu
+
 from core.debugging import imshow
 from core.array_utils import multiply_arrays
 
@@ -202,7 +203,28 @@ def adjust_markings_pass(method, markings, image, cell_mask):
     imsave(A_image,"temp/A.png")
     imsave(B_image,"temp/B.png")
     
-    combined = multiply_arrays(B,1-A,1-L)
+    # dist = distance_transform_L1(cell_mask).astype(float)
+    
+    # adjusted_dist = np.zeros_like(dist)
+    
+    # cluster_map = connected_components(cell_mask)
+    
+    # for group_number in range(np.max(cluster_map) + 1):
+        
+    #     island_rc = np.transpose(np.nonzero(cluster_map == group_number))
+        
+    #     distances = [dist[r,c] for r,c in island_rc]
+        
+    #     max_distance = np.max(distances)
+        
+    #     for r, c in island_rc:
+    #         adjusted_dist[r,c] = dist[r,c] / max_distance
+            
+    # imsave(np.dstack((255*adjusted_dist,)*3).astype(np.uint8),"temp/adjusted_dist.png")
+    
+    # combined = multiply_arrays(B,1-A,1-L)
+    
+    combined = 1-L
     
     combined[np.logical_not(cell_mask)] = 0
     
@@ -289,5 +311,90 @@ def auto_adjust_markings(imageJSON, cellMaskJSON, markingsJSON):
     result = [[float(mark[0]),float(mark[1])] for mark in markings]
     
     return orjson.dumps(result).decode('utf-8')
+
+@eel.expose
+def auto_preload_markings(imageJSON, cellMaskJSON):
+    
+    image = json_to_pixels(imageJSON)
+    
+    cell_mask_image = json_to_pixels(cellMaskJSON)
+    
+    cell_mask = cell_mask_image[:,:,0] > 0
+    
+    cell_mask_image = np.dstack((np.where(cell_mask,255,0),)*3).astype(np.uint8)
+
+    image_LAB = cv2.cvtColor(image, cv2.COLOR_RGB2LAB)
+
+    L, A, B = image_LAB[:,:,0].astype(float), image_LAB[:,:,1].astype(float), image_LAB[:,:,2].astype(float)
+    
+    L = rescale_array(L)
+    
+    A = rescale_array(A)
+    
+    B = rescale_array(B)
+
+    L_image = np.dstack((255*L,)*3).astype(np.uint8)
+    A_image = np.dstack((255*A,)*3).astype(np.uint8)
+    B_image = np.dstack((255*B,)*3).astype(np.uint8)
+
+    imsave(L_image,"temp/L.png")
+    imsave(A_image,"temp/A.png")
+    imsave(B_image,"temp/B.png")
+     
+    # dist = distance_transform_L1(cell_mask).astype(float)
+    
+    # adjusted_dist = np.zeros_like(dist)
+    
+    # cluster_map = connected_components(cell_mask)
+    
+    # for group_number in range(np.max(cluster_map) + 1):
+        
+    #     island_rc = np.transpose(np.nonzero(cluster_map == group_number))
+        
+    #     distances = [dist[r,c] for r,c in island_rc]
+        
+    #     max_distance = np.max(distances)
+        
+    #     for r, c in island_rc:
+    #         adjusted_dist[r,c] = dist[r,c] / max_distance
+            
+    # imsave(np.dstack((255*adjusted_dist,)*3).astype(np.uint8),"temp/adjusted_dist.png")
+    
+    # combined = multiply_arrays(B,1-A,1-L)
+    
+    combined = 1 - L
+    
+    combined[np.logical_not(cell_mask)] = 0
+    
+    combined_image = np.dstack((255*rescale_array(combined),)*3).astype(np.uint8)
+    
+    imsave(combined_image,"temp/combined.png")
+    
+    print("quantizing...")
+    
+    thresholded = binarize_otsu(rescale_array(combined))
+    
+    cluster_map = connected_components(cell_mask)
+
+    result = []
+    
+    for group_number in range(np.max(cluster_map) + 1):
+        
+        island_rc = np.transpose(np.nonzero(cluster_map == group_number))
+        
+        centroid = np.mean(island_rc,axis=0).astype(np.float32)
+
+        result.append(np.flip(centroid))
+
+    imsave(np.dstack((255*thresholded.astype(int),)*3).astype(np.uint8),"thresholded.png")
+    
+    return orjson.dumps([
+        
+        [float(mark[0]),float(mark[1])] for mark in result
+        
+        ]).decode("utf-8")
+    
+    
+    
 
 eel.start("index.html")
