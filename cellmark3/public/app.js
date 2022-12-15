@@ -373,7 +373,7 @@ function App() {
 
         let mask = Image.fromJSON(maskJSON)
 
-        const imgGs = img.toGreyscale().withMaskApplied(mask)
+        const imgGs = img.withMaskApplied(mask)
 
         setGreyscaleImage(imgGs)
 
