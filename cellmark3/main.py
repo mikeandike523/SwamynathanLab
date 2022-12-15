@@ -175,19 +175,17 @@ def load_markings(imageFilepath):
     return orjson.dumps(response.datastore).decode("utf-8")
 
 @eel.expose
-def auto_adjust_markings(greyscaleImageJSON, cellMaskJSON, markingsJSON):
+def auto_adjust_markings(imageJSON, cellMaskJSON, markingsJSON):
     
     cell_mask = json_to_pixels(cellMaskJSON)[:,:,0] > 0
     
-    greyscale_image = json_to_pixels(greyscaleImageJSON)
+    image = json_to_pixels(imageJSON)
     
     markings = orjson.loads(markingsJSON)
     
-    hint = np.zeros(greyscale_image.shape[:2], int) -1
+    hint = np.zeros(image.shape[:2], int) -1
   
     num_marks = len(markings)
-  
-    print(MARKER_ELEMENT) #@delete
   
     for i, mark in enumerate(markings):
         
@@ -201,7 +199,7 @@ def auto_adjust_markings(greyscaleImageJSON, cellMaskJSON, markingsJSON):
 
     hint[unseeded_area] = 0
     
-    watershed_labels = cv2.watershed(greyscale_image, hint).squeeze()
+    watershed_labels = cv2.watershed(image, hint).squeeze()
     
     watershed_labels[watershed_labels==0]=-1 # just in case
 
