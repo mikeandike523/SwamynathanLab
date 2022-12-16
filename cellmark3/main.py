@@ -374,19 +374,40 @@ def auto_preload_markings(imageJSON, cellMaskJSON):
     
     thresholded = binarize_otsu(rescale_array(combined))
     
-    cluster_map = connected_components(cell_mask)
+    cluster_map = connected_components(thresholded)
 
     result = []
     
     for group_number in range(np.max(cluster_map) + 1):
         
-        island_rc = np.transpose(np.nonzero(cluster_map == group_number))
+        island_rc = np.transpose(np.nonzero(cluster_map==group_number))
         
-        centroid = np.mean(island_rc,axis=0).astype(np.float32)
+        weights = np.array([combined[r,c] for r,c in island_rc],float)
+        
+        weights/= np.sum(weights)
+        
+        centroid = (np.sum(
+            
+                            np.multiply(
+                                island_rc.astype(float),
+                                np.stack((weights,)*2,axis=1)
+                            )
+                           
+                            ,axis=0)).astype(int)
+        
+        marker = None
+        
+        result_marker = np.flip(centroid)
 
-        result.append(np.flip(centroid))
-
-    imsave(np.dstack((255*thresholded.astype(int),)*3).astype(np.uint8),"thresholded.png")
+        if centroid[0] < 0 or centroid[0] >= cell_mask.shape[0] or centroid[1] < 0 or centroid[1] >= cell_mask.shape[1]:
+            result_marker = marker
+        
+        elif not cell_mask[centroid[0],centroid[1]]:
+            result_marker = marker
+        
+        if result_marker is not None:
+        
+            result.append(result_marker) 
     
     return orjson.dumps([
         
