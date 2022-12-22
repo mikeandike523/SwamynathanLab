@@ -98,3 +98,8 @@ def uuid_in(path):
         id = uuid.uuid4()
 
     return str(id)
+
+def remove_fs_significant_chars(path):
+    # filesystem reservered characters: https://stackoverflow.com/a/31976060
+    
+    return path.replace("/","").replace("\\","").replace("|","").replace("*","").replace("?","").replace(":","").replace("<","").replace(">","").replace("\"","").replace("\'","")

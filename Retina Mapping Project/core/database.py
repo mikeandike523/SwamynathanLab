@@ -44,8 +44,10 @@ class MapProxy:
 
 
 class Database:
-
+    
     def __init__(self,name,parent_directory=None, **kwargs):
+
+        self.subdb_prefix=""
 
         self.name = name
 
@@ -73,6 +75,9 @@ class Database:
 
         self.registry = fluiddict(default_factory=None) # raises KeyError
 
+    def engage_subdb(self,subdb):
+        self.subdb_prefix = subdb + "."
+
     def reset(self):
         init_folder(self.root,clear=True)
         self.__init__(self.name,self.parent_directory,**self.kwargs)
@@ -88,6 +93,7 @@ class Database:
 
     def register_variable(self,name,indirect=False):
 
+        name = self.subdb_prefix+name
         
         if self.persist_schema:
             self.__load_schema()
@@ -105,10 +111,15 @@ class Database:
             self.__save_schema()
 
     def register_once(self,name,indirect=False):
+        
+        name = self.subdb_prefix+name
+        
         if name not in self.registry:
             self.register_variable(name,indirect=indirect)
 
     def try_unregister(self,name):
+
+        name = self.subdb_prefix+name
 
         if self.persist_schema:
             self.__load_schema()
@@ -117,27 +128,38 @@ class Database:
             self.unregister_variable(name)
         except:
             pass
-
-        
+   
         if self.persist_schema:
             self.__save_schema()
 
     def unregister_variable(self,name):
+        
+        name = self.subdb_prefix + name
+        
         if name in self.registry:
             del self.registry[name]
         else:
             raise KeyError(f"Variable '{name}' is not currently registered.")
 
     def __set_direct_variable(self,name,value):
+        
+        name = self.subdb_prefix + name
+        
         self.__load_direct_datastore()
         self.direct_datastore[name] = value
         self.__save_direct_datastore()
 
     def __get_direct_variable(self,name):
+        
+        name = self.subdb_prefix + name
+        
         self.__load_direct_datastore()
         return self.direct_datastore[name]
 
     def __set_indirect_variable(self,name,value):
+        
+        name = self.subdb_prefix + name
+        
         print(f"Serialiazing variable '{name}'...")
         if "/" in name or "\\" in name:
             init_folder(join_paths(self.root, 'indirect_datastore',os.path.dirname(name)),clear=False)
@@ -146,6 +168,9 @@ class Database:
         print("Done.")
 
     def __get_indirect_variable(self,name):
+        
+        name = self.subdb_prefix + name
+        
         assert_existence_and_type(join_paths(self.root, 'indirect_datastore',name+".pkl"), FilesystemItemType.FILE)
         print(f"Deserializing variable {name}...")
         with open(join_paths(self.root, 'indirect_datastore',name+".pkl"),'rb') as fl:
@@ -155,6 +180,8 @@ class Database:
         
 
     def set_variable(self,name,value,direct=False):
+        
+        name = self.subdb_prefix + name
         
         # Disable direct storage. There is no real need. Also simplifies development of MapProy class.
         
@@ -172,6 +199,8 @@ class Database:
             self.__set_direct_variable(name,value)
 
     def get_variable(self,name):
+        
+        name = self.subdb_prefix + name
 
         if self.persist_schema:
             self.__load_schema()

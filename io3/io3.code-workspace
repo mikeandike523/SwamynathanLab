@@ -1,0 +1,16 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"editor.fontFamily":"Fira Code",
+		"editor.fontLigatures": true,
+		"terminal.integrated.fontFamily": "Fira Code",
+		"editor.wordWrap": "wordWrapColumn",
+		"editor.wordWrapColumn": 80,
+		"terminal.integrated.defaultProfile.windows":"Command Prompt",
+		"editor.rulers":[80]
+	}
+}

@@ -12,7 +12,7 @@ from core.debugging import imshow
 from core.types import fluiddict
 from core.progress import Progress
 from core.io import imload, imsave
-from core.path import init_folder
+from core.path import init_folder, remove_fs_significant_chars
 from core.debugging import SequentialNames
 from core.analysis import spine as spine_analysis
 import utils as U
@@ -202,6 +202,8 @@ def pick_file(db: Database):
     if panorama_path is None:
         print("No panorama selected. Quitting...")
         return cm.stop_here()
+        
+    db.engage_subdb(remove_fs_significant_chars(panorama_path))    
         
     panorama_image = imload(panorama_path)
     
