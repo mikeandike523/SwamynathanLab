@@ -13,9 +13,11 @@
 			"../TensorflowCellSeperationExperiments/src"
 		],
 		"python.analysis.autoImportCompletions": false,
-		"editor.fontFamily": "'Comic Mono', Consolas, 'Courier New', monospace",
+		"editor.fontFamily": "Fira Code",
+		"editor.fontLigatures": true,
 		"editor.wordWrap": "on",
 		"editor.wordWrapColumn": 80,
-		"python.terminal.activateEnvironment": false
+		"python.terminal.activateEnvironment": false,
+		"terminal.integrated.fontFamily": "Fira Code"
 	}
 }

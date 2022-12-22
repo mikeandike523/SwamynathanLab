@@ -735,6 +735,9 @@ class ImageStrip:
                 col_pointer = 0
             rows[-1].append(image)
             col_pointer+=1
+        if len(rows) > 1:
+            while len(rows[-1]) < len(rows[-2]):
+                rows[-1].append(np.zeros_like(rows[-2][0]))
         rows = [np.hstack(row) for row in rows]
         return np.vstack(rows)
 

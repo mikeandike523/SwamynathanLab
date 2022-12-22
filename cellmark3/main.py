@@ -2,23 +2,31 @@ import os
 from time import sleep
 import pickle
 from math import floor
+from termcolor import colored
+
+os.system("color")
 
 from core.file_picker import askopenfilename
 from core.io import imload, imsave
 from rpe_cell_counting import get_conservative_cell_mask
 from core.python_utils import fluiddict, rescale_array
-from core.image_ops import circular_structuring_element, draw_element_on, voronoi, connected_components, distance_transform_L1, unique_quantize, binarize_otsu
-
+from core.image_ops import circular_structuring_element, draw_element_on, voronoi, connected_components, distance_transform_L1, unique_quantize, binarize_otsu, get_outer_contour, check_if_contour_bounds_pixels_in_mask, resample_contour_by_segment_length
+from core.array_utils import bin_edges_to_midpoints
 from core.debugging import imshow
 from core.array_utils import multiply_arrays
+from core.data_analysis import find_threshold_minimizing_intra_class_variance
 
 import eel
 import orjson
 import numpy as np
 import cv2
-
+import matplotlib.pyplot as plt
 
 FS_POLL_TIME = 0.125
+
+PREFILL_GROUP_MIN_PIXELS = 7 * 7
+
+PREFILL_CONTOUR_RESAMPLE_PIXELS = 5
 
 MARKER_RADIUS=2
 
@@ -60,20 +68,147 @@ def load_image(path):
     pixels=imload(path)
     return pixels_to_json(pixels)
 
-@eel.expose
-def load_image_rpe(path):
-    pixels=imload(path)
+def process_group_mask_for_group_number(cluster_map, group_number):
+    
+        group_mask = cluster_map == group_number
+        
+        if np.count_nonzero(group_mask) < PREFILL_GROUP_MIN_PIXELS:
+            print("Pixel group too small.")
+            return None
+        
+        try:
+        
+            outer_contour = get_outer_contour(group_mask)
+            
+            if not check_if_contour_bounds_pixels_in_mask(outer_contour, group_mask):
+                print("Pixel group had malformed border")
+                return None
+        
+        except Exception as e:
+            print(e)
+            return None
+            
+        outer_contour = resample_contour_by_segment_length(outer_contour, PREFILL_CONTOUR_RESAMPLE_PIXELS, closed=True)
+        
+        centroid_rc = np.mean((np.transpose(np.nonzero(group_mask))).astype(float), axis=0)
+        
+        centroid_xy = np.flip(centroid_rc)
+        
+        distances_to_centroid = []
+        
+        for contour_point in outer_contour:
+            distances_to_centroid.append(
+                np.linalg.norm(
+                    centroid_xy.astype(float) -
+                    contour_point.astype(float)
+                )
+            )
+            
+        border_variation = np.var(distances_to_centroid)/((np.mean(distances_to_centroid))**2) * float(np.count_nonzero(group_mask))
+        
+        return border_variation
 
-    # # Remove this feature, may be causing unnecessary bias
-    #DARK_FRACTION = 0.25 # The opacity of the original image in the non-mask regions
-    #conservative_cell_mask = get_conservative_cell_mask(pixels)
-    # background = np.zeros_like(pixels)
-    # new_pixels = np.zeros_like(pixels)
-    # for c in range(3):
-    #     new_pixels[:,:,c] = np.where(conservative_cell_mask,pixels[:,:,c],(1.0-DARK_FRACTION)*background[:,:,c] + DARK_FRACTION*pixels[:,:,c]) 
+def cluster_filter_pass(pixels, cluster_map):
+    
+    num_groups = np.max(cluster_map) + 1
+
+    border_variations = {}
+
+    for group_number in range(num_groups):
+        
+        border_variation = process_group_mask_for_group_number(cluster_map, group_number)
+        
+        if border_variation is not None:
+        
+            border_variations[group_number] = border_variation
+    
+    border_variation_data = np.array(list(border_variations.values()),float)
+    
+    threshold = find_threshold_minimizing_intra_class_variance(border_variation_data)
+
+    new_cluster_map = cluster_map.copy()
     
     new_pixels = pixels.copy()
+    
+    for group_number in range(num_groups):
+
+        if group_number not in border_variations:
+            
+            new_cluster_map[cluster_map==group_number]=-1
+            
+            new_pixels[cluster_map==group_number, ...] = (255,255,255)
+            
+        else:
+            
+            if border_variations[group_number] < threshold:
+                
+                new_pixels[cluster_map==group_number, ...] = (255,0,255)
+                
+            else:
+            
+                new_pixels[cluster_map==group_number, ...] = (0,255,0)
+            
+                new_cluster_map[cluster_map==group_number] = -1
+                
+    return new_pixels, new_cluster_map
+
+def get_random_colors(num_colors):
+    random_colors = [(255,255,255)]
+    for _ in range(num_colors):
+        random_colors.append((255*np.array([
+            np.random.uniform(),
+            np.random.uniform(),
+            np.random.uniform()
+            ],float)).astype(np.uint8))
+    return np.array(random_colors,np.uint8)
+
+@eel.expose
+def load_image_rpe(path):
+    
+    pixels=imload(path).copy()
+
+    conservative_cell_mask = get_conservative_cell_mask(pixels)
+    
+    cluster_map = connected_components(conservative_cell_mask)
+    
+    new_pixels, new_cluster_map = pixels.copy(), cluster_map.copy()
+
+    for _ in range(5):    
+        new_pixels, new_cluster_map = cluster_filter_pass(new_pixels, new_cluster_map)
         
+    single_cell_masses = []    
+        
+    num_groups = int(np.max(new_cluster_map)) + 1
+    
+    for group_number in list(np.unique(new_cluster_map)):
+        
+        if group_number == -1:
+            continue
+
+        single_cell_masses.append(np.count_nonzero(new_cluster_map==group_number))
+                
+    median = np.median(single_cell_masses)
+    
+    print(single_cell_masses)    
+    
+    print(median)        
+                
+    random_colors = get_random_colors(int(np.max(cluster_map))+1) # Will never need more than this many colors. Will likely need MUCH less
+     
+    num_groups = int(np.max(cluster_map)) + 1            
+  
+    new_pixels = pixels.copy()
+
+    for group_number in range(num_groups):
+        
+        mass = np.count_nonzero(cluster_map==group_number)
+
+        relative_mass = int(round(mass/median))
+        
+        # print(median,np.all(cluster_map[cluster_map==group_number]==new_cluster_map[cluster_map==group_number]),mass,relative_mass)
+        
+        new_pixels[cluster_map==group_number, ...] = random_colors[relative_mass]            
+                
     return pixels_to_json(new_pixels) 
 
 @eel.expose

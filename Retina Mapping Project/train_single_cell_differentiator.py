@@ -3,6 +3,7 @@ setup.setup()
 
 import os
 import random
+from termcolor import colored
 
 import numpy as np
 import PIL.Image
@@ -17,23 +18,34 @@ import image_processing as IP
 from core.database import Database
 from core.path import join_paths, init_folder
 
+os.system("color")
 
 # Application Parameters
 TRAINING_DATA_PATH = "output/training_pairs"
 SZ = 64
 BASE_FILTERS = 256
 USE_RANDOM_FLIP = True
-DROPOUT_RATE = None # Do not include dropout layer
-NUM_TRAIN = 200
+DROPOUT_RATE = 0.125 # Do not include dropout layer
+NUM_TRAIN = 150
 NUM_VAL = 50
 BATCH_SIZE = 2
 NUM_VIS = 5
 EPOCHS = 150
-EPOCHS_PER_VIS=2
-LEARNING_RATE = 100e-6
+EPOCHS_PER_VIS=1
+LEARNING_RATE = 50e-6
+
+MIN_TRAINING_LOSS = 10**(-4.5) # See lab notebook entry for 12/21/22: 
+"""
+https://1drv.ms/u/s!AmJvVJEp77Anh7MzVfeVIEWGIxsEVw?wd=target%28Retina%20Mapping%20Project%202.one%7C0AD5B108-6408-47ED-88D6-2C23B8C9ECE5%2F%2A12%5C%2F21%5C%2F22%7C2165159F-BEA7-4AA4-85AB-220383CE4A27%2F%29
+onenote:https://d.docs.live.net/27b0ef2991546f62/Documents/Swamynathan%20Lab%20Image%20Processing/Retina%20Mapping%20Project%202.one#*12/21/22&section-id={0AD5B108-6408-47ED-88D6-2C23B8C9ECE5}&page-id={2165159F-BEA7-4AA4-85AB-220383CE4A27}&end
+"""
+
 
 # App Setup
 init_folder("output",clear=False)
+
+with open("output/losses.csv", "w") as fl:
+    fl.write("epoch,training_loss,validation_loss\n")
 
 # helper functions
 
@@ -127,18 +139,26 @@ class ApplicationCallback(tf.keras.callbacks.Callback):
         init_folder("output/mid_training_validation")
 
     def on_epoch_end(self,epoch,logs=None):
+        
+        if logs["mean_squared_logarithmic_error"] < MIN_TRAINING_LOSS:
+            self.model.stop_training = True
+        
+        with open("output/losses.csv","a") as fl:
+            fl.write(f"{int(epoch)},{logs['mean_squared_logarithmic_error']},{logs['val_mean_squared_logarithmic_error']}\n")
+        
+        subfigures = []
 
-        MTV_batch_X, MTV_batch_Y = vis_val_gen[0]
+        for batch_idx in range(len(vis_val_gen)):
+            MTV_batch_X, MTV_batch_Y = vis_val_gen[batch_idx]
+            MTV_batch_predictedY = self.model.predict(MTV_batch_X)
 
-        MTV_batch_predictedY = self.model.predict(MTV_batch_X)
-        rows = []
-        for idx in range(BATCH_SIZE):
-            rows.append(np.hstack((
-                IP.image_1p0_to_255(MTV_batch_X[idx]),
-                IP.image_1p0_to_255( MTV_batch_Y[idx]),
-                IP.image_1p0_to_255(np.squeeze(MTV_batch_predictedY[idx])),
-            )))
-        figure_pixels = np.vstack(rows)
+            for idx in range(len(MTV_batch_X)):
+                subfigures.append(np.hstack((
+                    IP.image_1p0_to_255(MTV_batch_X[idx]),
+                    IP.image_1p0_to_255( MTV_batch_Y[idx]),
+                    IP.image_1p0_to_255(np.squeeze(MTV_batch_predictedY[idx])),
+                )))
+        figure_pixels = IP.ImageStrip(*subfigures, max_cols=2).getImagePixels()
 
         if self.epoch_number % EPOCHS_PER_VIS == 0:
            PIL.Image.fromarray(figure_pixels).save(f"output/mid_training_validation/epoch_{self.epoch_number}.png")

@@ -3,6 +3,8 @@ from math import floor
 import cv2
 import numpy as np
 from scipy.spatial import KDTree
+import skimage.draw
+import shapely.geometry
 
 from core.python_utils import rescale_array
 from core.debugging import imshow
@@ -135,6 +137,91 @@ def binarize_otsu(plot):
     binarized = cv2.threshold(plot_image,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)[1]
     
     return binarized.squeeze() > 0
+
+def rasterize_polygon(points_rc, shape = None):
+    
+    points_array = np.array(points_rc,int)
+    
+    if shape is None:
+        
+        min_r = np.min(points_array[:,0])
+        min_c = np.min(points_array[:,1])
+
+        max_r = np.max(points_array[:,0])
+        max_c = np.max(points_array[:,1])
+
+        shape = max_r - min_r + 1, max_c - min_c + 1
+    
+    return skimage.draw.polygon2mask(shape,points_array)
+
+def get_outer_contour(mask): # contours are in x, y
+    # cases to handle: where there is more than on outer contour
+    # where there are no outer contours
+    
+    mask_image = np.expand_dims(np.where(mask,255,0),axis=2).astype(np.uint8)
+    contours, heirarchy = cv2.findContours(mask_image, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    
+    contours = [contour.squeeze(axis=-2) for contour in contours]
+    heirarchy = heirarchy.squeeze(axis=0)
+    
+    outer_contours = []
+    
+    for contour, heirarchy in zip(contours,heirarchy):
+        if heirarchy[-1] == -1:
+            outer_contours.append(contour)
+            
+    if len(outer_contours)==0  or len(outer_contours) > 1:
+        return None
+    
+    return outer_contours[0]
+
+def check_if_contour_bounds_pixels_in_mask(contour, mask, minimum_coverage_fraction = 1.0, dilate_radius = 2):
+    
+    if len(contour) < 3: return False
+    
+    if np.count_nonzero(mask) == 0: return False
+    
+    rc_contour = np.flip(np.copy(contour), axis=1)
+    
+    rc_contour_mask = rasterize_polygon(rc_contour, mask.shape)
+    
+    dilation_element = np.expand_dims(circular_structuring_element(dilate_radius,np.uint8),axis=2)
+    
+    if dilate_radius > 0:
+        rc_contour_mask =cv2.dilate(np.expand_dims(np.where(rc_contour_mask,1,0),axis=2).astype(np.uint8), dilation_element).squeeze() > 0 
+    
+    intersection = np.logical_and(mask, rc_contour_mask)
+    
+    return np.count_nonzero(intersection) / np.count_nonzero(mask) >= minimum_coverage_fraction
+
+def resample_contour_by_segment_length(contour, segment_length_pixels, closed=False):
+    
+    # Does not convert to nearest integer. That will be the job of the calling code.
+    # However, the result contour will inherit the dtype of the input contour if present
+    
+    # Will always round such that the largest segment is still <= segment_length_pixels
+    
+    resampled_contour = []
+    
+    poly = None
+    
+    if closed:
+        poly = shapely.geometry.LinearRing(contour)
+    else:
+        poly = shapely.geometry.LineString(contour)
+    
+    num_segments = int(np.ceil(poly.length / segment_length_pixels))
+    
+    for it in range((num_segments+1) if not closed else num_segments):
+        
+        t = it/num_segments
+        
+        interpolated_point = poly.interpolate(t,normalized=True)
+        
+        resampled_contour.append(np.array(interpolated_point.coords[0]))
+    
+    return np.array(resampled_contour, contour.dtype if hasattr(contour, 'dtype') else float)
+
     
     
     

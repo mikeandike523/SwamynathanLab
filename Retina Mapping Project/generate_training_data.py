@@ -19,7 +19,6 @@ from get_conservative_cell_mask import get_conservative_cell_mask
 
 
 # Application Parameters
-PAD_PIXELS = 5
 MAX_IMAGES = float("inf")
 
 SZ = 64 # Technically, it doesn't have to, but it should match the SZ used to train the network 

@@ -28,7 +28,9 @@ from core.deeplearning import CellDifferentiator
 
 pretrained_path = "assets\\segmentation.h5"
 
-differentiator = CellDifferentiator(128,128,pretrained_path)
+SZ = 64
+
+differentiator = CellDifferentiator(SZ,256,pretrained_path)
 
 def run_differentiator(pixels):
     retval =differentiator.apply_to_images(np.array([pixels]))[0]
@@ -43,18 +45,19 @@ def get_neural_network_output(masked_image_white_background):
     windowable_output_image = IP.to_WindowableRGBImage(np.zeros_like(masked_image_white_background))
 
     locations = U.Geometry.get_window_locations_covering_image(
-        W,H,128,128
+        W,H,SZ,SZ
     )
 
     for x,y in locations:
-        input_window = windowable_input_image.read_window(x,y,128,128)
+        input_window = windowable_input_image.read_window(x,y,SZ,SZ)
         output_window = run_differentiator(input_window)
-        windowable_output_image.write_window(x,y,128,128,np.array(output_window,np.uint8))
+        windowable_output_image.write_window(x,y,SZ,SZ,np.array(output_window,np.uint8))
 
     return windowable_output_image.getImagePixels()
 
 def threshold_network_output(output_pixels):
-    return np.mean(output_pixels.astype(float)/255,axis=2) > 0.5
+    # return np.mean(output_pixels.astype(float)/255,axis=2) > 0.5
+    return IP.binarize_otsu(np.mean(output_pixels.astype(float),axis=2)/255).astype(float) > 0.5
 
 def predict_labels(masked_image_white_background, conservative_cell_mask):
 
@@ -694,6 +697,8 @@ def assemble_results(db:Database):
     
     all_watershed_labels = np.zeros((H,W),int)-1
     
+    panorama_name = db.get_variable("panorama_name")
+    
     for wing in range(num_wings):
         print(f"Assembling results for wing {wing+1}")
         
@@ -733,7 +738,7 @@ def assemble_results(db:Database):
             
             group_count = wing_group_counts[group_number]
             
-            plot = IP.Draw.draw_annotation(plot,f"{int(group_count)}",annotation_position[0],annotation_position[1],5,(255,0,0),4,0.75,4)
+            plot = IP.Draw.draw_annotation(plot,f"{int(group_count)+1}",annotation_position[0],annotation_position[1],5,(255,0,0),4,0.75,4)
     
             edge_plot_group_number += 1
     
@@ -754,8 +759,24 @@ def assemble_results(db:Database):
             
     imshow(plot,"Group Counts Plot")    
     
-    panorama_name = db.get_variable("panorama_name")
+    imsave(plot,f"output/{panorama_name}/Group Counts Plot")  
     
-    imsave(plot,f"output/{panorama_name}/Group Counts Plot")    
-    
+    with open(f"output/{panorama_name}/group_counts.tsv","w") as fl:
+        
+        fl.write("\tWing\tGroup\t# Nuclei")
+        
+        for wing in range(num_wings):
+            
+            num_groups = db.get_variable("num_groups")[wing]
+            
+            wing_group_counts = group_counts[wing]
+        
+            for group_number in range(num_groups):
+                
+                group_count = wing_group_counts[group_number]
+                
+                fl.write(f"{int(wing)+1}\t{int(group_number)+1}\t{int(group_count)}\n")
+
+
+                
 cm.menu(preamble)
