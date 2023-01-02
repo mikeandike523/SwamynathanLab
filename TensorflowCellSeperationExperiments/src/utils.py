@@ -215,19 +215,41 @@ class Geometry:
         COLINEAR = 0
 
     @classmethod
-    def get_window_locations_covering_image(cls,image_W,image_H,window_W,window_H):
+    def get_window_locations_covering_image(cls,image_W,image_H,window_W,window_H, overlap_fraction_x = 0.0, overlap_fraction_y = 0.0):
 
-        num_x = int(np.ceil(image_W/window_W))
-        num_y = int(np.ceil(image_H/window_H))
+        stride_x = int(window_W-overlap_fraction_x*image_W)
 
-        locations = [] # (x,y)
+        stride_y = int(window_H-overlap_fraction_y*image_H)
 
-        for iy in range(num_y):
-            for ix in range(num_x):
-                locations.append((int(ix*window_W),int(iy*window_H)))
+        covered = np.zeros((window_H,window_W),dtype=bool)
+
+        x = 0
+
+        y = 0
+
+        locations = []
+
+        while np.any(np.logical_not(covered)):
+            
+            locations.append((x,y))
+
+            # Taking advantage of the fact that numpy arrays won't error when setting a rectangular window that may fall partway outside the bounds of the array
+
+            covered[y:y+window_H, x:x+window_W] = True
+
+            x += stride_x
+
+            if x >= image_W:
+
+                x = 0
+
+                y += stride_y
+
+            if y >= image_H:
+
+                break
 
         return locations
-
 
 
     # --- Algorithm courtesy of https://en.wikipedia.org/wiki/Curve_orientation#:~:text=External%20links-,Orientation%20of%20a%20simple%20polygon,-%5Bedit%5D

@@ -1,0 +1,23 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../TensorflowCellSeperationExperiments/src"
+		}
+	],
+	"settings":{
+		"terminal.integrated.defaultProfile.windows": "Command Prompt",
+		"python.analysis.extraPaths": [
+			"../TensorflowCellSeperationExperiments/src"
+		],
+		"python.analysis.autoImportCompletions": false,
+		"editor.fontFamily": "Fira Code",
+		"editor.fontLigatures": true,
+		"editor.wordWrap": "on",
+		"editor.wordWrapColumn": 80,
+		"python.terminal.activateEnvironment": false,
+		"terminal.integrated.fontFamily": "Fira Code"
+	}
+}

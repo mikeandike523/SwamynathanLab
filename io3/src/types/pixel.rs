@@ -22,15 +22,18 @@ impl Pixel {
     pub fn get_value(&self, channel: usize) -> Result<f64, Io3Error> {
         Ok(*(self.values.get(channel).ok_or(Io3Error::new(None))?))
     }
+    pub fn get_values(&self) -> Result<Vec<f64>, Io3Error> {
+        Ok(self.values.to_owned())
+    }
+    pub fn push_vec(&mut self, v: Vec<f64>) -> Pixel {
+        let mut px = Pixel::new();
+        px.__push_vec(&v);
+        px
+    }
 }
 
 impl Pixel {
-    pub fn from_vec(v: &Vec<f64>) -> Pixel {
-        let mut pixel = Pixel::new();
-        pixel.push_vec(&v);
-        pixel
-    }
-    pub fn push_vec(&mut self, values: &Vec<f64>) {
+    fn __push_vec(&mut self, values: &Vec<f64>) {
         for value in values.iter() {
             self.values.push(*value)
         }    

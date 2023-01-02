@@ -7,8 +7,11 @@ use crate::types::io3_error::Io3Error;
 
 #[pyclass]
 pub struct Image {
+    #[pyo3(get,set)]
     w: usize,
+    #[pyo3(get,set)]
     h: usize, 
+    #[pyo3(get,set)]
     nchannels: usize,
     data: Vec<f64>
 }
@@ -81,11 +84,40 @@ impl Image {
     }
 
     pub fn set_window(&mut self, x: i32, y: i32, window: &Image) -> Result<(),Io3Error> {
-        let w = window.w;
-        let h = window.h;
+        let ww = window.w;
+        let wh = window.h;
+        for wx in 0..ww {
+            for wy in 0..wh {
+                let pixel = window.unchecked_get_pixel(wx as i32, wy as i32)?;
+                self.set_pixel(x + (wx as i32), y+(wy as i32), &pixel)?;
+            }
+        }        
         Ok(())
     }
 
+    pub fn get_window(&self, x: i32, y: i32, ww: usize, wh: usize, default_value: Option<Pixel>) -> Result<Image, Io3Error>{
+        let mut window = Image::new(ww, wh, self.nchannels);
+        for wx in 0..ww {
+            for wy in 0..wh {
+                let pixel = self.get_pixel(x+(wx as i32), y+(wy as i32),default_value.to_owned())?;
+                window.set_pixel(x + (wx as i32), y+(wy as i32), &(match pixel{
+                    Some(value) => value,
+                    None => {
+                        return Err(Io3Error::new(None))
+                    }
+                }))?;
+            } 
+        } 
+        Ok(window)
+    }
 
+    pub fn get_data(&self) -> Vec<f64> {
+        self.data.clone()
+    }
+
+    pub fn set_data(&mut self, data: Vec<f64>){
+        self.data.clear();
+        self.data.extend(data.clone());
+    }
     
 }

@@ -30,15 +30,15 @@ def assert_existence_and_type(path, item_type: int):
     
     if item_type == FilesystemItemType.FILE:
         if not os.path.exists(path):
-            raise AssertionError(f"File '{path}' does not exist.")
+            raise FileNotFoundError(f"File '{path}' does not exist.")
         if os.path.isdir(path):
-            raise AssertionError(f"Path '{path}' exists but is a directory.")
+            raise IsADirectoryError(f"Path '{path}' exists but is a directory.")
 
     if item_type == FilesystemItemType.DIRECTORY:
         if not os.path.exists(path):
-            raise AssertionError(f"Directory '{path}' does not exist.")
+            raise FileNotFoundError(f"Directory '{path}' does not exist.")
         if not os.path.isdir(path):
-            raise AssertionError(f"Path '{path}' exists but is not a directory.")
+            raise NotADirectoryError(f"Path '{path}' exists but is not a directory.")
 
 def blocking_unlink(path):
     assert_existence_and_type(path,FilesystemItemType.FILE)

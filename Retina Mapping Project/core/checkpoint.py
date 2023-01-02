@@ -13,35 +13,11 @@ init_folder("checkpoint/",clear=False)
 
 class CheckpointManager:
 
-    @classmethod
-    def checkpoint_name_indicates_first(cls,checkpoint_name):
-        
-        if checkpoint_name is None:
-            return True
-
-        checkpoint_int_value = None
-        
-        try:
-            checkpoint_int_value = int(checkpoint_name)
-        except:
-            pass
-
-        if checkpoint_int_value is not None and checkpoint_int_value  == 0:
-            return True
-
-        if not checkpoint_name.strip(' '):
-            return True
-
-        if checkpoint_name.strip(' ').lower() == 'start' or checkpoint_name.strip(' ').lower() == 'none':
-            return True 
-
-        return False
-
-    def __init__(self,name, persist_db_schema=True):
+    def __init__(self,name):
 
         self.name = name
 
-        self.database = Database(name,"checkpoint/", persist_schema=persist_db_schema)
+        self.database = Database(name,"checkpoint/")
 
         self.checkpoints = OrderedDict()
 
@@ -80,29 +56,9 @@ class CheckpointManager:
         self.running = False
 
     # @TODO: refactor this function
-    def start_at(self,checkpoint_name):
+    def start_at(self,checkpoint_index):
         
         self.running = True
-
-        checkpoint_index = 0
-
-        num_checkpoints = len(self.checkpoints)
-
-        if (checkpoint_name is not None) and (checkpoint_name.lower().strip() in ["last","ultimate","secondtolast","penultimate"]):
-
-            if checkpoint_name.lower().strip() in ["last","ultimate"]:
-                checkpoint_index = num_checkpoints-1
-            if checkpoint_name.lower().strip() in ["secondtolast","penultimate"]:
-                checkpoint_index = num_checkpoints-2
-
-        else:
-            if not CheckpointManager.checkpoint_name_indicates_first(checkpoint_name):
-                checkpoint_name = checkpoint_name.strip(' ')
-                if checkpoint_name not in self.checkpoints.keys():
-                    raise KeyError(f"Checkpoint '{checkpoint_name}' has not been registered.")
-                checkpoint_index = list(self.checkpoints.keys()).index(checkpoint_name)
-
-    
 
         for cpt_idx,checkpoint_routine in enumerate(list(self.checkpoints.values())[checkpoint_index:]):
             if self.running:
@@ -112,36 +68,7 @@ class CheckpointManager:
                 print(f"Stopping prior to checkpoint {list(self.checkpoints.keys())[cpt_idx+checkpoint_index]}...")
                 sys.exit(0)
 
-    def register_variable(self,name,indirect=False):
-
-        self.database.register_variable(name,indirect=indirect)
-
-    def unregister_variable(self,name):
-        
-        self.datbase.register_variable(name)
-
-    def register_once(self,name,indirect=False):
-        self.database.register_once(name,indirect=indirect)
-
-    def try_unregister(self,name):
-        self.database.try_unregister(name)
-
-    def parse_args(self):
-        parser = argparse.ArgumentParser()
-        parser.add_argument("--checkpoint","-c")
-        parser.add_argument("--reset","-r",action="store_true")        
-        parser.add_argument("--fresh","-f",action='store_true')
-
-        args = parser.parse_args()
-        if (not args.reset) and not (args.fresh):
-            self.start_at(args.checkpoint)
-        else:
-            self.database.reset()
-            if args.fresh:
-                self.start_at(args.checkpoint)
-
-    def menu(self, callback=None):
-        # self.start_at(list(self.checkpoints.keys())[RunMenu.select_and_get_idx(self.checkpoints)])
+    def menu(self):
 
         os.system('cls')
 
@@ -151,27 +78,16 @@ class CheckpointManager:
 
         while selection is None:
             for idx,checkpoint_name in enumerate(checkpoint_names):
-                print(f"{idx}: {checkpoint_name}")
-            print(f"r (reset): reset and don't run")
-            print(f"f (fresh): reset and run from start")
+                print(f"{idx+1}: {checkpoint_name}")
             selection = input("Select a checkpoint: ")
             selection = selection.strip(' ').lower()
-            
-            if callback is not None:
-                callback(selection)
-            
-            if selection == "r":
-                return self.database.reset()
-            if selection == "f":
-                self.database.reset()
-                return self.start_at(checkpoint_names[0])
+
             try:
                 selection = int(selection)
+                if selection > len(checkpoint_names) or selection < 1:
+                    raise ValueError("Selection not in range.")
             except:
                 print("Selection invalid.")
                 selection = None
-            
-        self.start_at(checkpoint_names[selection])
-
-
         
+        self.start_at(selection-1)

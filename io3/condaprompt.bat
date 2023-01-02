@@ -1,0 +1,1 @@
+cmd /K C:\Users\micha\anaconda3\Scripts\activate.bat swamynathan_lab && D: && cd %~dp0

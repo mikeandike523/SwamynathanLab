@@ -1,0 +1,80 @@
+absl-py==1.3.0
+affine @ file:///home/conda/feedstock_root/build_artifacts/affine_1648309059244/work
+alphashape==1.3.1
+astunparse==1.6.3
+attrs @ file:///home/conda/feedstock_root/build_artifacts/attrs_1671632566681/work
+cachetools==5.2.0
+certifi==2022.12.7
+charset-normalizer==2.1.1
+click @ file:///D:/bld/click_1666798499870/work
+click-log==0.4.0
+click-plugins==1.1.1
+cligj @ file:///home/conda/feedstock_root/build_artifacts/cligj_1633637764473/work
+colorama @ file:///home/conda/feedstock_root/build_artifacts/colorama_1666700638685/work
+contourpy==1.0.6
+cycler==0.11.0
+dill==0.3.6
+flatbuffers==22.12.6
+fonttools==4.38.0
+gast==0.4.0
+google-auth==2.15.0
+google-auth-oauthlib==0.4.6
+google-pasta==0.2.0
+grpcio==1.51.1
+h5py==3.7.0
+idna==3.4
+imageio==2.23.0
+io3 @ file:///D:/OneDriveRoot/OneDrive/SwamynathanLab/io3/target/wheels/io3-0.1.0-cp310-none-win_amd64.whl
+joblib==1.2.0
+keras==2.10.0
+Keras-Preprocessing==1.1.2
+kiwisolver==1.4.4
+libclang==14.0.6
+llvmlite==0.39.1
+Markdown==3.4.1
+MarkupSafe==2.1.1
+matplotlib==3.6.2
+maturin==0.14.7
+networkx==2.8.8
+numba==0.56.4
+numpy==1.24.1
+oauthlib==3.2.2
+opencv-python==4.6.0.66
+opt-einsum==3.3.0
+packaging==22.0
+Pillow==9.3.0
+protobuf==3.19.6
+pyasn1==0.4.8
+pyasn1-modules==0.2.8
+pyparsing @ file:///home/conda/feedstock_root/build_artifacts/pyparsing_1652235407899/work
+python-dateutil==2.8.2
+PyWavelets==1.4.1
+rasterio==1.3.4
+requests==2.28.1
+requests-oauthlib==1.3.1
+rsa==4.9
+Rtree==1.0.1
+scikit-image==0.19.3
+scikit-learn==1.2.0
+scipy==1.9.3
+shapely==2.0.0
+six==1.16.0
+snuggs==1.4.7
+tensorboard==2.10.1
+tensorboard-data-server==0.6.1
+tensorboard-plugin-wit==1.8.1
+tensorflow-cpu==2.10.0
+tensorflow-directml-plugin==0.3.0.dev221212
+tensorflow-estimator==2.10.0
+tensorflow-io-gcs-filesystem==0.29.0
+tensorflow_intel==2.10.0
+termcolor==2.1.1
+threadpoolctl==3.1.0
+tifffile==2022.10.10
+tomli==2.0.1
+trimesh==3.17.1
+typing_extensions==4.4.0
+urllib3==1.26.13
+Werkzeug==2.2.2
+wrapt==1.14.1
+wxPython==4.2.0

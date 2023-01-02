@@ -29,7 +29,6 @@ np.random.seed()
 
 
 
-
 # Application Parameters
 W=128
 H=128

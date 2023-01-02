@@ -1,17 +1,8 @@
 import os
 import pickle
-import warnings
+import uuid
 
-from .path import normalize_path, join_paths, init_folder, FilesystemItemType, assert_existence_and_type
-from .types import fluiddict
-from .pythonic import null_factory_with_warnings
-
-
-class Variable:
-
-    def __init__(self,name,indirect=False):
-        self.name = name
-        self.indirect = indirect
+from .path import normalize_path, join_paths, init_folder, FilesystemItemType, assert_existence_and_type, remove_fs_significant_chars
 
 class MapProxy:
 
@@ -22,11 +13,12 @@ class MapProxy:
 
     def set_variable(self,key,value): # always assume indirect storage
 
-        if key not in self.db.registry:
-            self.db.set_variable(key,[None,]*self.map_size)
+        if not self.db.has_variable(key):
+            self.db.set_variable(key,[None for _ in range(self.map_size)])
 
         # cheap, not very efficient
         init_value=self.db.get_variable(key)
+        
         init_value[self.map_index] =value
 
         self.db.set_variable(key,init_value)
@@ -42,124 +34,70 @@ class MapProxy:
     def size(self):
         return self.map_size
 
-
 class Database:
-    
-    def __init__(self,name,parent_directory=None, **kwargs):
 
-        self.subdb_prefix=""
+    def __init__(self, name, parent_directory=None):
 
         self.name = name
-
-        self.parent_directory = parent_directory
-
-        self.kwargs = kwargs
-
-        self.persist_schema = True
-
-        if "persist_schema" in kwargs:
-            self.persist_schema = kwargs["persist_schema"]
 
         if parent_directory is None:
 
             parent_directory = normalize_path(join_paths(os.getenv("USERAPPDATA"), "python-databases"),make_absolute=True)
 
+        self.parent_directory = parent_directory
+
         self.root = normalize_path(join_paths(parent_directory, name),make_absolute=True)
 
         init_folder(join_paths(self.root,"indirect_datastore"),clear=False)
 
-        self.schema_path = join_paths(self.root,"schema.pkl")
+        self.subdb_prefix = ""
 
-        # Used to store small variable (direct variables)
-        self.direct_datastore = fluiddict(default_factory=None) # raises KeyError
+        if not self.has_variable("subdb_table", False):
 
-        self.registry = fluiddict(default_factory=None) # raises KeyError
+            self.set_variable("subdb_table",{}, False)
 
-    def engage_subdb(self,subdb):
-        self.subdb_prefix = subdb + "."
+    # def reset(self): # not yet tested
+    #     init_folder(self.root,clear=True)
+    #     self.__init__(self.name,self.parent_directory,**self.kwargs)
 
-    def reset(self):
-        init_folder(self.root,clear=True)
-        self.__init__(self.name,self.parent_directory,**self.kwargs)
+    def get_subdb_uuid(self,name):
 
-    def __save_schema(self):
-        with open(self.schema_path, "wb") as fl:
-            pickle.dump(self.registry,fl)
+        subdb_table = self.get_variable("subdb_table",False)
 
-    def __load_schema(self):
-        if os.path.isfile(self.schema_path):
-            with open(self.schema_path,"rb") as fl:
-                self.registry = pickle.load(fl)
+        if name in subdb_table:
+            return subdb_table[name]
 
-    def register_variable(self,name,indirect=False):
+        u = str(uuid.uuid4())
 
-        name = self.subdb_prefix+name
-        
-        if self.persist_schema:
-            self.__load_schema()
+        while u in subdb_table.values():
 
-        """!    Enable storage for variable with name `name`
-                For large variables, specify `indirect=True`. This will store the variable data in its own pickle file
-        """
+            u = str(uuid.uuid4())
 
-        if name not in self.registry:
-            self.registry[name] = Variable(name, indirect=indirect)
+        subdb_table[name] = u
+
+        self.set_variable("subdb_table", subdb_table, False)
+
+        return u
+
+    def engage_subdb(self, subdb_name):
+        subdb_name = remove_fs_significant_chars(subdb_name).replace(" ","_")
+        self.subdb_prefix = f"[{self.get_subdb_uuid(subdb_name)}]."
+
+    def get_prefixed(self, name):
+        if not self.subdb_prefix:
+            return name
         else:
-            warnings.warn(f"Variable '{name}' already registered. Ignoring...")
+            if not name.startswith(self.subdb_prefix):
+                return self.subdb_prefix+name
+            else:
+                return name
 
-        if self.persist_schema:
-            self.__save_schema()
+    def set_variable(self,name,value, prefix=True):
+        
+        if prefix:
+    
+            name = self.get_prefixed(name)
 
-    def register_once(self,name,indirect=False):
-        
-        name = self.subdb_prefix+name
-        
-        if name not in self.registry:
-            self.register_variable(name,indirect=indirect)
-
-    def try_unregister(self,name):
-
-        name = self.subdb_prefix+name
-
-        if self.persist_schema:
-            self.__load_schema()
-
-        try:
-            self.unregister_variable(name)
-        except:
-            pass
-   
-        if self.persist_schema:
-            self.__save_schema()
-
-    def unregister_variable(self,name):
-        
-        name = self.subdb_prefix + name
-        
-        if name in self.registry:
-            del self.registry[name]
-        else:
-            raise KeyError(f"Variable '{name}' is not currently registered.")
-
-    def __set_direct_variable(self,name,value):
-        
-        name = self.subdb_prefix + name
-        
-        self.__load_direct_datastore()
-        self.direct_datastore[name] = value
-        self.__save_direct_datastore()
-
-    def __get_direct_variable(self,name):
-        
-        name = self.subdb_prefix + name
-        
-        self.__load_direct_datastore()
-        return self.direct_datastore[name]
-
-    def __set_indirect_variable(self,name,value):
-        
-        name = self.subdb_prefix + name
-        
         print(f"Serialiazing variable '{name}'...")
         if "/" in name or "\\" in name:
             init_folder(join_paths(self.root, 'indirect_datastore',os.path.dirname(name)),clear=False)
@@ -167,10 +105,12 @@ class Database:
             pickle.dump(value,fl)
         print("Done.")
 
-    def __get_indirect_variable(self,name):
+    def get_variable(self,name, prefix=True):
         
-        name = self.subdb_prefix + name
+        if prefix:
         
+            name = self.get_prefixed(name)
+
         assert_existence_and_type(join_paths(self.root, 'indirect_datastore',name+".pkl"), FilesystemItemType.FILE)
         print(f"Deserializing variable {name}...")
         with open(join_paths(self.root, 'indirect_datastore',name+".pkl"),'rb') as fl:
@@ -178,53 +118,14 @@ class Database:
             print("Done.")
             return retval
         
-
-    def set_variable(self,name,value,direct=False):
+    def has_variable(self,name,prefix=True):
         
-        name = self.subdb_prefix + name
+        if prefix:
         
-        # Disable direct storage. There is no real need. Also simplifies development of MapProy class.
-        
-        direct = False
+            name = self.get_prefixed(name)
 
-        # if not self.registry.is_set(name):
-          # raise KeyError(f"Missing registry entry for variable '{name}'.")
-
-        self.register_once(name,not direct)
-
-        is_indirect = self.registry[name].indirect
-        if is_indirect:
-            self.__set_indirect_variable(name,value)
-        else:
-            self.__set_direct_variable(name,value)
-
-    def get_variable(self,name):
-        
-        name = self.subdb_prefix + name
-
-        if self.persist_schema:
-            self.__load_schema()
-
-        if not self.registry.is_set(name):
-            raise KeyError(f"Missing registry entry for variable '{name}'.")
-
-
-        is_indirect = self.registry[name].indirect
-        return self.__get_indirect_variable(name) if is_indirect else self.__get_direct_variable(name)
-
-    def __save_direct_datastore(self):
-        print("Serializing direct datastore...")
-        with open(join_paths(self.root, "direct_datastore.pkl"),"wb") as fl:
-            pickle.dump(self.direct_datastore,fl)
-        print("Done.")
-
-    def __load_direct_datastore(self):
-        if os.path.isfile(join_paths(self.root, "direct_datastore.pkl")):
-            print("Deserializing direct data store...")
-            with open(join_paths(self.root, "direct_datastore.pkl"),"rb") as fl:
-                self.direct_datastore= pickle.load(fl)
-            print("Done.")
-        else:
-            print("No existing direct datastore.")
-
-        
+        try:
+            assert_existence_and_type(join_paths(self.root, 'indirect_datastore',name+".pkl"), FilesystemItemType.FILE)
+            return True
+        except AssertionError:
+            return False
