@@ -46,7 +46,7 @@ if __name__ == "__main__":
     differentiator = CellDifferentiator(SZ,256,pretrained_path)
 
     def run_differentiator(pixels):
-        retval =differentiator.apply_to_images(np.array([pixels]))[0]
+        retval =(differentiator.apply_to_images(np.array([pixels]))[0]).astype(np.uint8)
         return retval
 
     def get_neural_network_output(masked_image_white_background):
@@ -56,7 +56,6 @@ if __name__ == "__main__":
         # windowable_input_image = IP.to_WindowableRGBImage(masked_image_white_background)
         windowable_input_image = Io3Image.from_array(masked_image_white_background)
 
-        im_debug_server.imshow(windowable_input_image.to_array())
 
         # windowable_output_image = IP.to_WindowableRGBImage(np.zeros_like(masked_image_white_background))
         windowable_output_image = Io3Image.from_array(np.zeros_like(masked_image_white_background))
@@ -65,13 +64,18 @@ if __name__ == "__main__":
             W,H,SZ,SZ
         )
 
+        Logging.info(locations)
+
         for x,y in locations:
             # input_window = windowable_input_image.read_window(x,y,SZ,SZ)
             input_window = windowable_input_image.get_window(x,y,SZ,SZ)
+            
+            output_window = Io3Image.from_array(run_differentiator(input_window.to_array()))
 
-            output_window = run_differentiator(input_window.to_array())
             # windowable_output_image.write_window(x,y,SZ,SZ,np.array(output_window,np.uint8))
-            windowable_output_image.set_window(x,y,Io3Image.from_array(np.array(output_window,np.uint8)))
+            windowable_output_image.set_window(x,y,output_window)
+
+        im_debug_server.imshow(windowable_output_image.to_array())
 
         # return windowable_output_image.getImagePixels()
 

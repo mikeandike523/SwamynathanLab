@@ -18,8 +18,8 @@ class Image:
         self.rimg = rustcore.Image(self.w, self.h, self.nchannels)
         self.dtype = None
 
-        if ((os.getenv('IO3_TIPS') or "").strip(' ').lower() != 'off'):
-            print(colored("class io3.pycore.Image: Note, the only function that automatically calls `Image.swap_back()` is `Image.to_array()`. Remember to manually call `Image.swap_back()` when needed to syncronize python-side and rust-side data. Set environment variable `IO3_TIPS=off` to disable warnings.","yellow"))
+        # if ((os.getenv('IO3_TIPS') or "").strip(' ').lower() != 'off'):
+        #     print(colored("class io3.pycore.Image: Note, the only function that automatically calls `Image.swap_back()` is `Image.to_array()`. Remember to manually call `Image.swap_back()` when needed to syncronize python-side and rust-side data. Set environment variable `IO3_TIPS=off` to disable warnings.","yellow"))
         
     def __set_data(self, data):
         self.data = data

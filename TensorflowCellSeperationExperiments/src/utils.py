@@ -217,11 +217,11 @@ class Geometry:
     @classmethod
     def get_window_locations_covering_image(cls,image_W,image_H,window_W,window_H, overlap_fraction_x = 0.0, overlap_fraction_y = 0.0):
 
-        stride_x = int(window_W-overlap_fraction_x*image_W)
+        stride_x = int(window_W-overlap_fraction_x*window_W)
 
-        stride_y = int(window_H-overlap_fraction_y*image_H)
+        stride_y = int(window_H-overlap_fraction_y*window_H)
 
-        covered = np.zeros((window_H,window_W),dtype=bool)
+        covered = np.zeros((image_H,image_W),dtype=bool)
 
         x = 0
 
@@ -235,7 +235,7 @@ class Geometry:
 
             # Taking advantage of the fact that numpy arrays won't error when setting a rectangular window that may fall partway outside the bounds of the array
 
-            covered[y:y+window_H, x:x+window_W] = True
+            covered[y:(y+window_H), x:(x+window_W)] = True
 
             x += stride_x
 

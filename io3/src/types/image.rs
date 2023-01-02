@@ -100,7 +100,7 @@ impl Image {
         for wx in 0..ww {
             for wy in 0..wh {
                 let pixel = self.get_pixel(x+(wx as i32), y+(wy as i32),default_value.to_owned())?;
-                window.set_pixel(x + (wx as i32), y+(wy as i32), &(match pixel{
+                window.set_pixel((wx as i32), (wy as i32), &(match pixel{
                     Some(value) => value,
                     None => {
                         return Err(Io3Error::new(None))
